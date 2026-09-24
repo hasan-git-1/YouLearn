@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       const isNowCompleted = !existing[0].completed;
       await db
         .update(watchHistory)
-        .set({ completed: isNowCompleted, lastWatchedAt: new Date() })
+        .set({ completed: isNowCompleted, watchedAt: new Date() })
         .where(eq(watchHistory.id, existing[0].id));
 
       return NextResponse.json({ completed: isNowCompleted });
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         videoId,
         completed: true,
-        lastWatchedAt: new Date(),
+        watchedAt: new Date(),
       });
       return NextResponse.json({ completed: true });
     }

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 import { Search, BookOpen, Zap, TrendingUp, GraduationCap, Mic, Play } from 'lucide-react';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { db } from '@/db';
