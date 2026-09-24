@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 
 interface AuthContextType {
@@ -17,6 +17,38 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function getAuthErrorMessage(error: AuthError | Error | unknown): string {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as AuthError).message;
+    
+    // Common Supabase auth error messages
+    if (message.includes('Invalid login credentials') || message.includes('Invalid email or password')) {
+      return 'Invalid email or password. Please check your credentials.';
+    }
+    if (message.includes('Email not confirmed')) {
+      return 'Please check your email and click the confirmation link before signing in.';
+    }
+    if (message.includes('Too many requests') || message.includes('rate limit')) {
+      return 'Too many attempts. Please wait a moment and try again.';
+    }
+    if (message.includes('User already registered') || message.includes('already been registered')) {
+      return 'An account with this email already exists. Try signing in instead.';
+    }
+    if (message.includes('Password should be at least')) {
+      return 'Password is too short. Please use at least 6 characters.';
+    }
+    if (message.includes('Invalid email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (message.includes('signup disabled') || message.includes('Signups not allowed')) {
+      return 'Sign up is currently disabled. Please contact support.';
+    }
+    
+    return message;
+  }
+  return 'An unexpected error occurred. Please try again.';
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -57,12 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string) => {
       try {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return { error: error.message };
+        if (error) return { error: getAuthErrorMessage(error) };
         setIsAuthModalOpen(false);
         return {};
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Failed to sign in';
-        return { error: message };
+        return { error: getAuthErrorMessage(e) };
       }
     },
     [supabase]
@@ -72,14 +103,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password: string) => {
       try {
         const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) return { error: error.message };
+        if (error) return { error: getAuthErrorMessage(error) };
         if (data?.session) {
           setIsAuthModalOpen(false);
         }
-        return { message: 'Account created! If confirmation is enabled, please check your email.' };
+        // Check if email confirmation is required
+        const needsConfirmation = data?.user && !data?.session;
+        if (needsConfirmation) {
+          return { message: 'Account created! Please check your email to confirm your account.' };
+        }
+        return { message: 'Account created successfully!' };
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Failed to create account';
-        return { error: message };
+        return { error: getAuthErrorMessage(e) };
       }
     },
     [supabase]

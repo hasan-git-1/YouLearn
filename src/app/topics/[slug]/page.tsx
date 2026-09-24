@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { GraduationCap, Video, Mic, Zap, Users, Hash } from 'lucide-react';
+import { GraduationCap, Video, Mic, Zap, Users, Hash, Wifi } from 'lucide-react';
 import { db } from '@/db';
 import { topics } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { keywordSearch } from '@/services/search/keyword';
+import { fastSearch } from '@/services/search/fast';
 import { classifyIntent } from '@/services/search/intent';
 import { generateTopicOverview, generateLearningPath } from '@/services/ai';
 import { CategorySection } from '@/components/ui/CategorySection';
@@ -13,8 +14,23 @@ import { AILearningPathView } from '@/components/ui/AILearningPathView';
 import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
-import { ColdStartState } from '@/components/ui/ColdStartState';
 import type { Video as VideoType, Playlist, Channel } from '@/types';
+
+// Live results indicator for fast search
+function LiveResultsIndicator({ query }: { query: string }) {
+  return (
+    <div className="mb-8 animate-fade-up flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+      <Wifi size={16} className="text-emerald-400 animate-pulse" />
+      <span>Showing live YouTube results for <strong style={{ color: 'var(--text-primary)' }}>&ldquo;{query}&rdquo;</strong></span>
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        Live
+      </span>
+      <p className="text-xs max-w-md text-center" style={{ color: 'var(--text-muted)' }}>
+        These are real-time results from YouTube. Full indexing with AI summaries takes ~3-5 minutes.
+      </p>
+    </div>
+  );
+}
 
 interface TopicPageProps {
   params: Promise<{ slug: string }>;
@@ -40,11 +56,29 @@ export default async function TopicPage({ params }: TopicPageProps) {
   const { categoryOrder } = classifyIntent(topic.name);
   const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
 
-  // Generate AI overview and learning path if content exists
+  // Cold start: no results in DB yet — use fast direct YouTube search
+  let isLiveResults = false;
+  let liveSearchData: typeof searchData | null = null;
+
+  if (totalResults === 0) {
+    // Fetch live results from YouTube API directly
+    try {
+      liveSearchData = await fastSearch({ q: topic.name, limit: 12 });
+      isLiveResults = true;
+    } catch (e) {
+      console.error('[TopicPage] Fast search error:', e);
+    }
+  }
+
+  // Use live data if available, otherwise DB data
+  const displayData = isLiveResults && liveSearchData ? liveSearchData : searchData;
+  const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
+
+  // Generate AI overview and learning path if content exists (only for DB results)
   let aiOverview = null;
   let aiLearningPath = null;
 
-  if (totalResults > 0) {
+  if (!isLiveResults && totalResults > 0) {
     const allContent = [
       ...courses.map((c) => ({
         id: c.id,
@@ -89,14 +123,14 @@ export default async function TopicPage({ params }: TopicPageProps) {
     }
   }
 
-  // Create fast lookup maps for learning path
+  // Create fast lookup maps for learning path (only for DB results)
   const videosById: Record<string, VideoType> = {};
-  [...videos, ...podcasts, ...shorts].forEach((v) => {
+  [...displayVideos, ...displayPodcasts, ...displayShorts].forEach((v) => {
     videosById[v.id] = v as VideoType;
   });
 
   const coursesById: Record<string, Playlist> = {};
-  courses.forEach((c) => {
+  displayCourses.forEach((c) => {
     coursesById[c.id] = c as Playlist;
   });
 
@@ -150,57 +184,54 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
       {/* Content */}
       <div className="px-4 py-10" style={{ maxWidth: 1280, margin: '0 auto' }}>
-        {totalResults === 0 ? (
-          <ColdStartState query={topic.name} />
-        ) : (
-          <div>
-            {/* AI Topic Overview */}
-            {aiOverview && (
-              <AIOverviewCard topicName={topic.name} overview={aiOverview} />
-            )}
+        {isLiveResults && <LiveResultsIndicator query={topic.name} />}
+        <div>
+          {/* AI Topic Overview (only for DB results) */}
+          {aiOverview && (
+            <AIOverviewCard topicName={topic.name} overview={aiOverview} />
+          )}
 
-            {/* AI Learning Path */}
-            {aiLearningPath && (
-              <AILearningPathView
-                learningPath={aiLearningPath}
-                videosById={videosById}
-                coursesById={coursesById}
-              />
-            )}
+          {/* AI Learning Path (only for DB results) */}
+          {aiLearningPath && (
+            <AILearningPathView
+              learningPath={aiLearningPath}
+              videosById={videosById}
+              coursesById={coursesById}
+            />
+          )}
 
-            {/* Content Categories */}
-            <div className="space-y-14">
-              {categoryOrder.map((cat) => {
-                if (cat === 'courses' && courses.length > 0) return (
-                  <CategorySection key="courses" id="courses" title="Courses" icon={<GraduationCap size={18} color="white" />} count={courses.length}>
-                    {courses.map((c) => <CourseCard key={c.id} course={c as Playlist} />)}
-                  </CategorySection>
-                );
-              if (cat === 'videos' && videos.length > 0) return (
-                <CategorySection key="videos" id="videos" title="Videos" icon={<Video size={18} color="white" />} count={videos.length}>
-                  {videos.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+          {/* Content Categories */}
+          <div className="space-y-14">
+            {categoryOrder.map((cat) => {
+              if (cat === 'courses' && displayCourses.length > 0) return (
+                <CategorySection key="courses" id="courses" title="Courses" icon={<GraduationCap size={18} color="white" />} count={displayCourses.length}>
+                  {displayCourses.map((c) => <CourseCard key={c.id} course={c as Playlist} />)}
                 </CategorySection>
               );
-              if (cat === 'podcasts' && podcasts.length > 0) return (
-                <CategorySection key="podcasts" id="podcasts" title="Podcasts" icon={<Mic size={18} color="white" />} count={podcasts.length}>
-                  {podcasts.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
-                </CategorySection>
-              );
-              if (cat === 'shorts' && shorts.length > 0) return (
-                <CategorySection key="shorts" id="shorts" title="Shorts" icon={<Zap size={18} color="white" />} count={shorts.length}>
-                  {shorts.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
-                </CategorySection>
-              );
-              if (cat === 'creators' && creators.length > 0) return (
-                <CategorySection key="creators" id="creators" title="Creators" icon={<Users size={18} color="white" />} count={creators.length} twoColumn>
-                  {creators.map((c) => <CreatorCard key={c.id} channel={c as Channel} />)}
-                </CategorySection>
-              );
-              return null;
-            })}
-            </div>
+            if (cat === 'videos' && displayVideos.length > 0) return (
+              <CategorySection key="videos" id="videos" title="Videos" icon={<Video size={18} color="white" />} count={displayVideos.length}>
+                {displayVideos.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+              </CategorySection>
+            );
+            if (cat === 'podcasts' && displayPodcasts.length > 0) return (
+              <CategorySection key="podcasts" id="podcasts" title="Podcasts" icon={<Mic size={18} color="white" />} count={displayPodcasts.length}>
+                {displayPodcasts.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+              </CategorySection>
+            );
+            if (cat === 'shorts' && displayShorts.length > 0) return (
+              <CategorySection key="shorts" id="shorts" title="Shorts" icon={<Zap size={18} color="white" />} count={displayShorts.length}>
+                {displayShorts.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+              </CategorySection>
+            );
+            if (cat === 'creators' && displayCreators.length > 0) return (
+              <CategorySection key="creators" id="creators" title="Creators" icon={<Users size={18} color="white" />} count={displayCreators.length} twoColumn>
+                {displayCreators.map((c) => <CreatorCard key={c.id} channel={c as Channel} />)}
+              </CategorySection>
+            );
+            return null;
+          })}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -6,14 +6,14 @@
  * Renders categorized results in intent-ranked order.
  */
 
-import { GraduationCap, Video, Mic, Zap, Users } from 'lucide-react';
+import { GraduationCap, Video, Mic, Zap, Users, Wifi, RefreshCw } from 'lucide-react';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
 import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
-import { ColdStartState } from '@/components/ui/ColdStartState';
 import { keywordSearch } from '@/services/search/keyword';
+import { fastSearch } from '@/services/search/fast';
 import { classifyIntent } from '@/services/search/intent';
 import { generateTopicOverview } from '@/services/ai';
 import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
@@ -29,6 +29,22 @@ async function triggerIngestion(query: string) {
   } catch (e) {
     console.error('[SearchResults] Could not trigger ingestion:', e);
   }
+}
+
+// Live results indicator for fast search
+function LiveResultsIndicator({ query }: { query: string }) {
+  return (
+    <div className="mb-8 animate-fade-up flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+      <Wifi size={16} className="text-emerald-400 animate-pulse" />
+      <span>Showing live YouTube results for <strong style={{ color: 'var(--text-primary)' }}>&ldquo;{query}&rdquo;</strong></span>
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        Live
+      </span>
+      <p className="text-xs max-w-md text-center" style={{ color: 'var(--text-muted)' }}>
+        These are real-time results from YouTube. Full indexing with AI summaries takes ~3-5 minutes.
+      </p>
+    </div>
+  );
 }
 
 const CATEGORY_META: Record<
@@ -59,27 +75,43 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
 
   const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
 
-  // Cold start: no results in DB yet
+  // Cold start: no results in DB yet — use fast direct YouTube search
+  let isLiveResults = false;
+  let liveSearchData: typeof searchData | null = null;
+
   if (totalResults === 0) {
     // Trigger background ingestion (non-blocking)
     void triggerIngestion(query);
-    return <ColdStartState query={query} />;
+
+    // Fetch live results from YouTube API directly
+    try {
+      liveSearchData = await fastSearch({ q: query, limit });
+      isLiveResults = true;
+    } catch (e) {
+      console.error('[SearchResults] Fast search error:', e);
+    }
   }
+
+  // Use live data if available, otherwise DB data
+  const displayData = isLiveResults && liveSearchData ? liveSearchData : searchData;
+  const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
 
   // Classify intent to determine section order
   const { categoryOrder } = classifyIntent(query);
 
-  // Generate AI overview
+  // Generate AI overview (only for DB results, not live)
   let aiOverview = null;
-  try {
-    const allContent = [
-      ...courses.map((c) => ({ title: c.title, description: null, contentType: 'course' })),
-      ...videos.map((v) => ({ title: v.title, description: v.description, contentType: v.contentType })),
-      ...podcasts.map((p) => ({ title: p.title, description: p.description, contentType: p.contentType })),
-    ];
-    aiOverview = await generateTopicOverview(query, allContent);
-  } catch (e) {
-    console.error('[SearchResults] AI overview error:', e);
+  if (!isLiveResults && totalResults > 0) {
+    try {
+      const allContent = [
+        ...courses.map((c) => ({ title: c.title, description: null, contentType: 'course' })),
+        ...videos.map((v) => ({ title: v.title, description: v.description, contentType: v.contentType })),
+        ...podcasts.map((p) => ({ title: p.title, description: p.description, contentType: p.contentType })),
+      ];
+      aiOverview = await generateTopicOverview(query, allContent);
+    } catch (e) {
+      console.error('[SearchResults] AI overview error:', e);
+    }
   }
 
 
@@ -95,14 +127,19 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           <span className="gradient-text">&ldquo;{query}&rdquo;</span>
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {totalResults} items across {categoryOrder.filter((cat) => {
-            const map = { courses, videos, podcasts, shorts, creators };
-            return (map[cat]?.length ?? 0) > 0;
-          }).length} categories
+          {isLiveResults
+            ? `${displayData.totalResults} live results from YouTube`
+            : `${totalResults} items across ${categoryOrder.filter((cat) => {
+                const map = { courses, videos, podcasts, shorts, creators };
+                return (map[cat]?.length ?? 0) > 0;
+              }).length} categories`}
         </p>
       </div>
 
-      {/* AI Topic Overview */}
+      {/* Live results indicator */}
+      {isLiveResults && <LiveResultsIndicator query={query} />}
+
+      {/* AI Topic Overview (only for DB results) */}
       {aiOverview && (
         <AIOverviewCard topicName={query} overview={aiOverview} />
       )}
@@ -114,11 +151,11 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           const animDelay = `${i * 0.08}s`;
 
           if (categoryKey === 'courses') {
-            if (!courses.length) return null;
+            if (!displayCourses.length) return null;
             return (
               <div key="courses" style={{ animationDelay: animDelay }}>
-                <CategorySection id="courses" title={meta.label} icon={meta.icon} count={courses.length}>
-                  {courses.slice(0, limit).map((course) => (
+                <CategorySection id="courses" title={meta.label} icon={meta.icon} count={displayCourses.length}>
+                  {displayCourses.slice(0, limit).map((course) => (
                     <CourseCard key={course.id} course={course as Playlist} />
                   ))}
                 </CategorySection>
@@ -127,11 +164,11 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           }
 
           if (categoryKey === 'videos') {
-            if (!videos.length) return null;
+            if (!displayVideos.length) return null;
             return (
               <div key="videos" style={{ animationDelay: animDelay }}>
-                <CategorySection id="videos" title={meta.label} icon={meta.icon} count={videos.length}>
-                  {videos.slice(0, limit).map((video) => (
+                <CategorySection id="videos" title={meta.label} icon={meta.icon} count={displayVideos.length}>
+                  {displayVideos.slice(0, limit).map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
@@ -140,11 +177,11 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           }
 
           if (categoryKey === 'podcasts') {
-            if (!podcasts.length) return null;
+            if (!displayPodcasts.length) return null;
             return (
               <div key="podcasts" style={{ animationDelay: animDelay }}>
-                <CategorySection id="podcasts" title={meta.label} icon={meta.icon} count={podcasts.length}>
-                  {podcasts.slice(0, limit).map((video) => (
+                <CategorySection id="podcasts" title={meta.label} icon={meta.icon} count={displayPodcasts.length}>
+                  {displayPodcasts.slice(0, limit).map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
@@ -153,11 +190,11 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           }
 
           if (categoryKey === 'shorts') {
-            if (!shorts.length) return null;
+            if (!displayShorts.length) return null;
             return (
               <div key="shorts" style={{ animationDelay: animDelay }}>
-                <CategorySection id="shorts" title={meta.label} icon={meta.icon} count={shorts.length}>
-                  {shorts.slice(0, limit).map((video) => (
+                <CategorySection id="shorts" title={meta.label} icon={meta.icon} count={displayShorts.length}>
+                  {displayShorts.slice(0, limit).map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
@@ -166,17 +203,17 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           }
 
           if (categoryKey === 'creators') {
-            if (!creators.length) return null;
+            if (!displayCreators.length) return null;
             return (
               <div key="creators" style={{ animationDelay: animDelay }}>
                 <CategorySection
                   id="creators"
                   title={meta.label}
                   icon={meta.icon}
-                  count={creators.length}
+                  count={displayCreators.length}
                   twoColumn
                 >
-                  {creators.slice(0, limit).map((ch) => (
+                  {displayCreators.slice(0, limit).map((ch) => (
                     <CreatorCard key={ch.id} channel={ch as Channel} />
                   ))}
                 </CategorySection>
