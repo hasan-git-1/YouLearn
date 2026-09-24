@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
-import { Search, BookOpen, Zap, TrendingUp, GraduationCap, Mic, Play } from 'lucide-react';
+import { Search, BookOpen, Zap, TrendingUp, GraduationCap, Mic, Play, ArrowRight } from 'lucide-react';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { db } from '@/db';
 import { topics } from '@/db/schema';
@@ -137,19 +137,27 @@ export default async function HomePage() {
       </section>
 
       {/* ── Featured topics grid ──────────────────────────────────────────── */}
-      <section className="px-4 py-16" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <section className="px-4 py-16 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2
-            className="font-bold text-2xl"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+          <div>
+            <h2
+              className="font-bold text-2xl sm:text-3xl text-white tracking-tight mb-1"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Popular Learning Topics
+            </h2>
+            <p className="text-xs text-gray-400">
+              Pre-indexed curriculum ready for immediate exploration
+            </p>
+          </div>
+          <Link
+            href="/topics"
+            className="btn-ghost py-2 px-4 text-xs font-semibold flex items-center gap-1.5"
+            style={{ textDecoration: 'none' }}
           >
-            Popular Topics
-          </h2>
-          {allTopics.length > 8 && (
-            <Link href="/topics" className="btn-ghost py-1.5 px-3 text-xs">
-              Browse all
-            </Link>
-          )}
+            <span>Explore All {allTopics.length || 25} Topics</span>
+            <ArrowRight size={14} />
+          </Link>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -157,23 +165,38 @@ export default async function HomePage() {
             <Link
               key={topic.slug}
               href={`/topics/${topic.slug}`}
-              className="glass-card group flex flex-col items-center justify-center p-6 text-center"
+              className="group relative flex flex-col items-center justify-center p-6 text-center rounded-2xl transition-all duration-300 hover:-translate-y-1"
               style={{
+                background: 'linear-gradient(145deg, rgba(20, 24, 45, 0.85) 0%, rgba(12, 15, 30, 0.95) 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                backdropFilter: 'blur(16px)',
                 textDecoration: 'none',
                 animationDelay: `${i * 0.05}s`,
               }}
             >
               <div
-                className={`flex items-center justify-center rounded-xl mb-3 text-2xl bg-gradient-to-br ${topic.color}`}
-                style={{ width: 52, height: 52 }}
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  border: '1px solid rgba(99, 102, 241, 0.4)',
+                  boxShadow: 'inset 0 0 20px rgba(99, 102, 241, 0.15)',
+                }}
+              />
+
+              <div
+                className={`flex items-center justify-center rounded-2xl mb-3 text-2xl bg-gradient-to-br ${topic.color} text-white shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform`}
+                style={{ width: 56, height: 56 }}
               >
                 {topic.icon}
               </div>
               <span
-                className="font-semibold text-sm text-center group-hover:text-indigo-300 transition-colors"
-                style={{ color: 'var(--text-primary)' }}
+                className="font-bold text-sm text-white group-hover:text-indigo-300 transition-colors"
+                style={{ fontFamily: 'var(--font-display)' }}
               >
                 {topic.name}
+              </span>
+              <span className="text-[11px] text-gray-400 mt-1 opacity-80 group-hover:opacity-100">
+                View Curriculum →
               </span>
             </Link>
           ))}
@@ -184,15 +207,15 @@ export default async function HomePage() {
       <section
         className="px-4 py-16"
         style={{
-          background: 'var(--bg-surface)',
+          background: 'rgba(10, 13, 26, 0.6)',
           borderTop: '1px solid var(--border-subtle)',
           borderBottom: '1px solid var(--border-subtle)',
         }}
       >
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <h2
-            className="font-bold text-2xl text-center mb-12"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+            className="font-bold text-2xl sm:text-3xl text-center text-white mb-12"
+            style={{ fontFamily: 'var(--font-display)' }}
           >
             How YouLearn works
           </h2>
@@ -201,10 +224,8 @@ export default async function HomePage() {
             {HOW_IT_WORKS.map((step, i) => (
               <div
                 key={step.step}
-                className="flex flex-col items-start p-6 rounded-2xl"
+                className="flex flex-col items-start p-6 rounded-2xl glass-card"
                 style={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-subtle)',
                   animationDelay: `${i * 0.1}s`,
                 }}
               >
@@ -215,18 +236,17 @@ export default async function HomePage() {
                   {step.icon}
                 </div>
                 <span
-                  className="text-xs font-bold mb-2"
-                  style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}
+                  className="text-xs font-mono font-bold mb-2 text-indigo-400 tracking-wider"
                 >
                   STEP {step.step}
                 </span>
                 <h3
-                  className="font-bold text-lg mb-2"
-                  style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}
+                  className="font-bold text-lg mb-2 text-white"
+                  style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {step.title}
                 </h3>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                <p className="text-sm leading-relaxed text-gray-300">
                   {step.description}
                 </p>
               </div>
@@ -239,18 +259,22 @@ export default async function HomePage() {
       <section className="px-4 py-20 text-center">
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
           <h2
-            className="font-bold text-3xl mb-4"
-            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+            className="font-bold text-3xl text-white mb-3"
+            style={{ fontFamily: 'var(--font-display)' }}
           >
-            Start learning today
+            Ready to master your next skill?
           </h2>
-          <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
-            25 topics pre-indexed with thousands of hours of curated YouTube content.
+          <p className="text-sm text-gray-300 mb-8">
+            Browse 25+ pre-indexed topic curriculums or search for any learning goal.
           </p>
-          <SearchBar
-            placeholder="What do you want to learn?"
-            size="default"
-          />
+          <Link
+            href="/topics"
+            className="btn-primary inline-flex items-center gap-2 text-sm font-semibold py-3 px-8 text-white rounded-xl shadow-lg shadow-indigo-600/40"
+            style={{ textDecoration: 'none' }}
+          >
+            <span>Explore All Learning Topics</span>
+            <ArrowRight size={16} />
+          </Link>
         </div>
       </section>
     </div>

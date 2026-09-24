@@ -3,6 +3,8 @@ import { Suspense } from 'react';
 import { SearchResults } from '@/features/search/SearchResults';
 import { SearchBar } from '@/components/ui/SearchBar';
 
+export const dynamic = 'force-dynamic';
+
 interface SearchPageProps {
   searchParams: Promise<{ q?: string; limit?: string }>;
 }
@@ -18,7 +20,15 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   };
 }
 
-export default async function SearchPage({ searchParams }: SearchPageProps) {
+export default function SearchPage(props: SearchPageProps) {
+  return (
+    <Suspense fallback={<SearchPageSkeleton />}>
+      <SearchPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function SearchPageContent({ searchParams }: SearchPageProps) {
   const { q, limit } = await searchParams;
   const query = q?.trim() ?? '';
 
@@ -80,6 +90,15 @@ function EmptyQueryState() {
       <p style={{ color: 'var(--text-secondary)', maxWidth: 400 }}>
         Type a topic above — &ldquo;Full Stack Dev&rdquo;, &ldquo;Data Science&rdquo;, &ldquo;Stock Market Basics&rdquo; — and we&apos;ll show you the best YouTube content for it.
       </p>
+    </div>
+  );
+}
+
+function SearchPageSkeleton() {
+  return (
+    <div className="px-4 py-12" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="skeleton h-10 w-full max-w-md mb-8 rounded-xl" />
+      <SearchResultsSkeleton />
     </div>
   );
 }
