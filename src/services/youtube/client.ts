@@ -19,7 +19,7 @@
  */
 
 import { google, youtube_v3 } from 'googleapis';
-import { consumeQuota } from './quota';
+import { consumeQuota, tryConsumeQuota } from './quota';
 import type {
   RawYouTubeVideo,
   RawYouTubeChannel,
@@ -251,7 +251,222 @@ export async function getPlaylistDetails(
   return results;
 }
 
-// ─── playlistItems.list — 1 unit per call ────────────────────────────────────
+// ─── Fast Search Variants (non-throwing quota) ─────────────────────────────────
+// Used by fastSearch for instant results — gracefully degrades if quota exceeded
+
+/**
+ * Fast search.list — 100 units per call, non-throwing on quota exceeded.
+ * Returns empty array if quota exceeded or any error occurs.
+ */
+export async function fastSearchContent(
+  options: SearchVideosOptions
+): Promise<SearchResultItem[]> {
+  const quotaResult = await tryConsumeQuota(100);
+  if (!quotaResult.success) {
+    console.warn('[fastSearchContent] Quota exceeded, returning empty results');
+    return [];
+  }
+
+  try {
+    const yt = getYouTubeClient();
+    const response = await yt.search.list({
+      part: ['snippet'],
+      q: options.query,
+      maxResults: options.maxResults ?? 25,
+      type: [options.type ?? 'video'],
+      videoDuration: options.videoDuration,
+      order: options.order ?? 'relevance',
+      relevanceLanguage: 'en',
+      safeSearch: 'moderate',
+    });
+
+    return (response.data.items ?? []).map((item) => ({
+      id:
+        item.id?.videoId ??
+        item.id?.channelId ??
+        item.id?.playlistId ??
+        '',
+      type: (item.id?.kind?.replace('youtube#', '') as 'video' | 'channel' | 'playlist') ?? 'video',
+      title: item.snippet?.title ?? '',
+      description: item.snippet?.description ?? '',
+      channelId: item.snippet?.channelId ?? '',
+      channelTitle: item.snippet?.channelTitle ?? '',
+      publishedAt: item.snippet?.publishedAt ?? '',
+      thumbnailUrl:
+        item.snippet?.thumbnails?.high?.url ??
+        item.snippet?.thumbnails?.default?.url ??
+        '',
+    }));
+  } catch (error) {
+    console.error('[fastSearchContent] Error:', error);
+    return [];
+  }
+}
+
+/**
+ * Fast videos.list — 1 unit per call, non-throwing on quota exceeded.
+ * Returns empty array if quota exceeded or any error occurs.
+ */
+export async function fastGetVideoDetails(
+  videoIds: string[]
+): Promise<RawYouTubeVideo[]> {
+  if (videoIds.length === 0) return [];
+
+  const quotaResult = await tryConsumeQuota(1);
+  if (!quotaResult.success) {
+    console.warn('[fastGetVideoDetails] Quota exceeded, returning empty results');
+    return [];
+  }
+
+  try {
+    const results: RawYouTubeVideo[] = [];
+    const yt = getYouTubeClient();
+
+    for (let i = 0; i < videoIds.length; i += 50) {
+      const batch = videoIds.slice(i, i + 50);
+      const batchQuota = await tryConsumeQuota(1);
+      if (!batchQuota.success) {
+        console.warn('[fastGetVideoDetails] Quota exceeded mid-batch, returning partial results');
+        break;
+      }
+
+      const response = await yt.videos.list({
+        part: ['snippet', 'contentDetails', 'statistics'],
+        id: batch,
+      });
+
+      for (const item of response.data.items ?? []) {
+        results.push({
+          id: item.id ?? '',
+          title: item.snippet?.title ?? '',
+          description: item.snippet?.description ?? '',
+          channelId: item.snippet?.channelId ?? '',
+          channelTitle: item.snippet?.channelTitle ?? '',
+          publishedAt: item.snippet?.publishedAt ?? '',
+          thumbnailUrl:
+            item.snippet?.thumbnails?.maxres?.url ??
+            item.snippet?.thumbnails?.high?.url ??
+            item.snippet?.thumbnails?.default?.url ??
+            '',
+          duration: item.contentDetails?.duration ?? '',
+          viewCount: item.statistics?.viewCount ?? '0',
+          likeCount: item.statistics?.likeCount ?? '0',
+          tags: item.snippet?.tags ?? [],
+          categoryId: item.snippet?.categoryId ?? '',
+          liveBroadcastContent: item.snippet?.liveBroadcastContent ?? 'none',
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('[fastGetVideoDetails] Error:', error);
+    return [];
+  }
+}
+
+/**
+ * Fast channels.list — 1 unit per call, non-throwing on quota exceeded.
+ * Returns empty array if quota exceeded or any error occurs.
+ */
+export async function fastGetChannelDetails(
+  channelIds: string[]
+): Promise<RawYouTubeChannel[]> {
+  if (channelIds.length === 0) return [];
+
+  const quotaResult = await tryConsumeQuota(1);
+  if (!quotaResult.success) {
+    console.warn('[fastGetChannelDetails] Quota exceeded, returning empty results');
+    return [];
+  }
+
+  try {
+    const results: RawYouTubeChannel[] = [];
+    const yt = getYouTubeClient();
+
+    for (let i = 0; i < channelIds.length; i += 50) {
+      const batch = channelIds.slice(i, i + 50);
+      const batchQuota = await tryConsumeQuota(1);
+      if (!batchQuota.success) {
+        console.warn('[fastGetChannelDetails] Quota exceeded mid-batch, returning partial results');
+        break;
+      }
+
+      const response = await yt.channels.list({
+        part: ['snippet', 'statistics'],
+        id: batch,
+      });
+
+      for (const item of response.data.items ?? []) {
+        results.push({
+          id: item.id ?? '',
+          title: item.snippet?.title ?? '',
+          description: item.snippet?.description ?? '',
+          subscriberCount: item.statistics?.subscriberCount ?? '0',
+          videoCount: item.statistics?.videoCount ?? '0',
+          thumbnailUrl:
+            item.snippet?.thumbnails?.high?.url ??
+            item.snippet?.thumbnails?.default?.url ??
+            '',
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('[fastGetChannelDetails] Error:', error);
+    return [];
+  }
+}
+
+/**
+ * Fast playlists.list — 1 unit per call, non-throwing on quota exceeded.
+ * Returns empty array if quota exceeded or any error occurs.
+ */
+export async function fastGetPlaylistDetails(
+  playlistIds: string[]
+): Promise<RawYouTubePlaylist[]> {
+  if (playlistIds.length === 0) return [];
+
+  const quotaResult = await tryConsumeQuota(1);
+  if (!quotaResult.success) {
+    console.warn('[fastGetPlaylistDetails] Quota exceeded, returning empty results');
+    return [];
+  }
+
+  try {
+    const results: RawYouTubePlaylist[] = [];
+    const yt = getYouTubeClient();
+
+    for (let i = 0; i < playlistIds.length; i += 50) {
+      const batch = playlistIds.slice(i, i + 50);
+      const batchQuota = await tryConsumeQuota(1);
+      if (!batchQuota.success) {
+        console.warn('[fastGetPlaylistDetails] Quota exceeded mid-batch, returning partial results');
+        break;
+      }
+
+      const response = await yt.playlists.list({
+        part: ['snippet', 'contentDetails'],
+        id: batch,
+      });
+
+      for (const item of response.data.items ?? []) {
+        results.push({
+          id: item.id ?? '',
+          title: item.snippet?.title ?? '',
+          channelId: item.snippet?.channelId ?? '',
+          itemCount: item.contentDetails?.itemCount ?? 0,
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error('[fastGetPlaylistDetails] Error:', error);
+    return [];
+  }
+}
 
 /**
  * Fetches ALL items in a playlist, paginating as needed.

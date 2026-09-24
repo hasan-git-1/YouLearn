@@ -9,10 +9,10 @@
  */
 
 import {
-  searchContent,
-  getVideoDetails,
-  getChannelDetails,
-  getPlaylistDetails,
+  fastSearchContent,
+  fastGetVideoDetails,
+  fastGetChannelDetails,
+  fastGetPlaylistDetails,
   parseDurationToSeconds,
 } from '@/services/youtube/client';
 import { classifyVideo, validateContentType, validateDifficulty } from '@/services/classification/rules';
@@ -48,7 +48,7 @@ export async function fastSearch(
 
   try {
     // ── Step 1: Search YouTube for videos ────────────────────────────────────
-    const searchResults = await searchContent({
+    const searchResults = await fastSearchContent({
       query: q,
       maxResults: limit * 3, // Get more to filter by type
       type: 'video',
@@ -64,15 +64,15 @@ export async function fastSearch(
     }
 
     // ── Step 2: Get full video details ───────────────────────────────────────
-    const rawVideos = await getVideoDetails(videoIds);
+    const rawVideos = await fastGetVideoDetails(videoIds);
 
     // ── Step 3: Get unique channel IDs and fetch channel details ─────────────
     const channelIds = [...new Set(rawVideos.map((v) => v.channelId).filter(Boolean))];
-    const rawChannels = await getChannelDetails(channelIds);
+    const rawChannels = await fastGetChannelDetails(channelIds);
     const channelMap = new Map(rawChannels.map((c) => [c.id, c]));
 
     // ── Step 4: Search for playlists (courses) ───────────────────────────────
-    const playlistSearchResults = await searchContent({
+    const playlistSearchResults = await fastSearchContent({
       query: `${q} course playlist`,
       maxResults: limit,
       type: 'playlist',
@@ -85,7 +85,7 @@ export async function fastSearch(
 
     let rawPlaylists: RawYouTubePlaylist[] = [];
     if (playlistIds.length > 0) {
-      rawPlaylists = await getPlaylistDetails(playlistIds);
+      rawPlaylists = await fastGetPlaylistDetails(playlistIds);
     }
 
     // ── Step 5: Classify and normalize videos ────────────────────────────────

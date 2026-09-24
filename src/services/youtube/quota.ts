@@ -86,6 +86,25 @@ export async function consumeQuota(units: number): Promise<QuotaState> {
 }
 
 /**
+ * Non-throwing version of consumeQuota for fastSearch and other non-critical paths.
+ * Returns { success: true, state } if quota available, { success: false, state } if exceeded.
+ */
+export async function tryConsumeQuota(units: number): Promise<{ success: boolean; state: QuotaState }> {
+  try {
+    const state = await consumeQuota(units);
+    return { success: true, state };
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      const state = await getQuotaState();
+      return { success: false, state };
+    }
+    // For other errors (DB connection, etc.), allow the request but log
+    console.warn('[QUOTA] tryConsumeQuota error, allowing request:', error);
+    return { success: true, state: { date: todayDate(), unitsUsed: 0, dailyLimit: DAILY_LIMIT } };
+  }
+}
+
+/**
  * Check if we have enough headroom for an operation without consuming quota.
  * Use before starting a large ingestion job.
  */

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { GraduationCap, Video, Mic, Zap, Users, Hash, Wifi } from 'lucide-react';
 import { db } from '@/db';
 import { topics } from '@/db/schema';
@@ -32,6 +33,53 @@ function LiveResultsIndicator({ query }: { query: string }) {
   );
 }
 
+// Skeleton fallback for Suspense
+function TopicPageSkeleton() {
+  return (
+    <div style={{ minHeight: '100dvh' }}>
+      <section className="px-4 py-16 bg-grid bg-radial-glow" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div className="skeleton h-6 w-32 mb-4 rounded" />
+          <div className="skeleton h-10 w-3/4 mb-4 rounded" />
+          <div className="skeleton h-4 w-1/2 mb-6 rounded" />
+          <div className="flex gap-2">
+            <div className="skeleton h-6 w-24 rounded" />
+            <div className="skeleton h-6 w-24 rounded" />
+            <div className="skeleton h-6 w-24 rounded" />
+          </div>
+        </div>
+      </section>
+      <div className="px-4 py-10" style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div className="space-y-14">
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="skeleton rounded-xl" style={{ width: 36, height: 36 }} />
+                <div className="space-y-1">
+                  <div className="skeleton h-5 rounded" style={{ width: 160 }} />
+                  <div className="skeleton h-3 rounded" style={{ width: 80 }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="glass-card overflow-hidden">
+                    <div className="skeleton" style={{ aspectRatio: '16/9' }} />
+                    <div className="p-3 space-y-2">
+                      <div className="skeleton h-4 rounded" style={{ width: '90%' }} />
+                      <div className="skeleton h-4 rounded" style={{ width: '70%' }} />
+                      <div className="skeleton h-3 rounded" style={{ width: '40%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface TopicPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -51,6 +99,17 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
   const topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
   if (!topic) notFound();
+
+  return (
+    <div style={{ minHeight: '100dvh' }}>
+      <Suspense fallback={<TopicPageSkeleton />}>
+        <TopicPageContent topic={topic} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function TopicPageContent({ topic }: { topic: { name: string; slug: string; description: string | null } }) {
 
   const searchData = await keywordSearch({ q: topic.name, limit: 12 });
   const { categoryOrder } = classifyIntent(topic.name);
