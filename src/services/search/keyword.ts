@@ -1,5 +1,5 @@
 /**
- * YouLearn — Keyword Search Service (Phase 1B)
+ * Tubiq — Keyword Search Service (Phase 1B)
  *
  * Full-text search against Postgres using the `search_vector` tsvector column
  * (GIN index) created in the migration. Covers title (weight A) + description (weight B).

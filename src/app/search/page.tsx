@@ -13,10 +13,10 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const { q } = await searchParams;
   const query = q?.trim();
   return {
-    title: query ? `${query} — YouLearn` : 'Search — YouLearn',
+    title: query ? `${query} — Tubiq` : 'Search — Tubiq',
     description: query
       ? `Discover the best YouTube courses, videos, podcasts, and creators for "${query}". AI-organized learning content.`
-      : 'Search YouLearn for any topic and discover curated YouTube learning content.',
+      : 'Search Tubiq for any topic and discover curated YouTube learning content.',
   };
 }
 

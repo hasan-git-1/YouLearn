@@ -1,5 +1,5 @@
 /**
- * YouLearn — /api/inngest route handler
+ * Tubiq — /api/inngest route handler
  *
  * Required for Inngest to work on Vercel.
  * Receives events from Inngest and dispatches to registered functions.

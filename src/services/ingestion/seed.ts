@@ -1,5 +1,5 @@
 /**
- * YouLearn — Seed Script (Phase 1A)
+ * Tubiq — Seed Script (Phase 1A)
  *
  * Runs the full ingestion pipeline for all 25 seed topics.
  * Run OFFLINE before public launch:

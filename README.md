@@ -1,4 +1,4 @@
-# YouLearn
+# Tubiq
 
 AI-guided knowledge-discovery platform. Users type a learning goal; the app returns organized YouTube content (Courses, Videos, Podcasts, Shorts, Creators) from a pre-indexed database, plus an AI overview and learning path.
 

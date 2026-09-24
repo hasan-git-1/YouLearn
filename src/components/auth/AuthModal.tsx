@@ -98,7 +98,7 @@ export function AuthModal() {
             <Sparkles size={14} className="text-white" />
           </div>
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-            YouLearn Account
+            Tubiq Account
           </span>
         </div>
 

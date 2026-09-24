@@ -1,5 +1,5 @@
 /**
- * YouLearn — Drizzle ORM Schema
+ * Tubiq — Drizzle ORM Schema
  *
  * Matches spec section 4 exactly.
  * Every table has a `content_source` column (default 'youtube') for future

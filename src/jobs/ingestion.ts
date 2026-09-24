@@ -1,5 +1,5 @@
 /**
- * YouLearn — Inngest background job functions (Inngest v4.x)
+ * Tubiq — Inngest background job functions (Inngest v4.x)
  *
  * In Inngest v4, createFunction signature is 2-arg:
  *   inngest.createFunction(options_with_trigger_inside, handler)
@@ -13,7 +13,7 @@ import { ingestTopic } from '@/services/ingestion/worker';
 
 // ─── Inngest client ───────────────────────────────────────────────────────────
 
-export const inngest = new Inngest({ id: 'youlearn' });
+export const inngest = new Inngest({ id: 'tubiq' });
 
 // ─── Ingestion job ────────────────────────────────────────────────────────────
 

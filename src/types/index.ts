@@ -1,5 +1,5 @@
 /**
- * YouLearn — Shared TypeScript types
+ * Tubiq — Shared TypeScript types
  * Derived from the DB schema (section 4 of spec).
  * These are the application-level types used across frontend and backend.
  */

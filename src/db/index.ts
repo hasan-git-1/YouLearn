@@ -1,5 +1,5 @@
 /**
- * YouLearn — Drizzle DB client singleton
+ * Tubiq — Drizzle DB client singleton
  *
  * Uses a connection pool via 'pg'. The singleton pattern prevents
  * exhausting connections during Next.js hot-reload in development.

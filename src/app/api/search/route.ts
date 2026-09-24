@@ -1,5 +1,5 @@
 /**
- * YouLearn — /api/search route
+ * Tubiq — /api/search route
  *
  * GET /api/search?q=full+stack+development&limit=12
  *

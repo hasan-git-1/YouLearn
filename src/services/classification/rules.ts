@@ -1,5 +1,5 @@
 /**
- * YouLearn — Rule-based content classifier (Phase 1A)
+ * Tubiq — Rule-based content classifier (Phase 1A)
  *
  * Implements the classification rules from spec section 6, Step 1.
  * This is a pure function — no DB calls, no AI, no side effects.

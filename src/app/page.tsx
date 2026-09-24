@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { topics } from '@/db/schema';
 
 export const metadata: Metadata = {
-  title: 'YouLearn — AI-Guided Knowledge Discovery',
+  title: 'Tubiq — AI-Guided Knowledge Discovery',
   description:
     'Discover the best YouTube courses, podcasts, and creators for any learning goal. AI-organized, quota-safe, always grounded in real content.',
 };
@@ -217,7 +217,7 @@ export default async function HomePage() {
             className="font-bold text-2xl sm:text-3xl text-center text-white mb-12"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            How YouLearn works
+            How Tubiq works
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

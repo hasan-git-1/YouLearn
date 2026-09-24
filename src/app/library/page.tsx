@@ -240,7 +240,7 @@ export default function LibraryPage() {
                       Completed Lessons Milestone
                     </h3>
                     <p className="text-xs text-gray-400">
-                      You have completed {totalCompletedCount} educational lessons on YouLearn. Keep up the momentum!
+                      You have completed {totalCompletedCount} educational lessons on Tubiq. Keep up the momentum!
                     </p>
                   </div>
                 </div>

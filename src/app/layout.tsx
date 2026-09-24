@@ -22,25 +22,25 @@ const plusJakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'YouLearn — AI-Guided Knowledge Discovery',
-    template: '%s | YouLearn',
+    default: 'Tubiq — AI-Guided Knowledge Discovery',
+    template: '%s | Tubiq',
   },
   description:
     'Discover the best YouTube courses, podcasts, videos, and creators for any topic. AI-organized, expertly curated learning paths.',
   keywords: ['learn', 'youtube courses', 'online learning', 'AI learning', 'educational videos'],
-  authors: [{ name: 'YouLearn' }],
-  creator: 'YouLearn',
+  authors: [{ name: 'Tubiq' }],
+  creator: 'Tubiq',
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://youlearn.app',
-    siteName: 'YouLearn',
-    title: 'YouLearn — AI-Guided Knowledge Discovery',
+    url: 'https://tubiq.app',
+    siteName: 'Tubiq',
+    title: 'Tubiq — AI-Guided Knowledge Discovery',
     description: 'Discover the best YouTube content for any learning goal.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'YouLearn — AI-Guided Knowledge Discovery',
+    title: 'Tubiq — AI-Guided Knowledge Discovery',
     description: 'Discover the best YouTube content for any learning goal.',
   },
   robots: {

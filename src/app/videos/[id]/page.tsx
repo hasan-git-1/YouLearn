@@ -16,10 +16,10 @@ export async function generateMetadata({ params }: VideoPageProps): Promise<Meta
     where: eq(videos.id, id),
     with: { channel: true },
   });
-  if (!video) return { title: 'Video Not Found — YouLearn' };
+  if (!video) return { title: 'Video Not Found — Tubiq' };
   return {
-    title: `${video.title} — YouLearn`,
-    description: video.description?.slice(0, 160) ?? `Watch "${video.title}" on YouLearn.`,
+    title: `${video.title} — Tubiq`,
+    description: video.description?.slice(0, 160) ?? `Watch "${video.title}" on Tubiq.`,
   };
 }
 

@@ -1,5 +1,5 @@
 /**
- * YouLearn — AI Service (Phase 2: Google Gemini Integration)
+ * Tubiq — AI Service (Phase 2: Google Gemini Integration)
  *
  * Grounded AI service interface powered by Google Gemini (gemini-2.5-flash).
  * Rules:
@@ -58,7 +58,7 @@ Strict Requirements:
 2. "what_to_learn": Array of 4-6 essential core concepts / technologies a student must master in logical sequence.
 3. "career_context": 1-2 sentences on career paths, industry demand, or practical application (or null if purely theoretical/hobby).
 4. "recommended_starting_point": Actionable advice on where a beginner should begin based on the indexed curriculum.
-5. "confidence_note": A brief 1-sentence note confirming this overview is synthesized for YouLearn learners.
+5. "confidence_note": A brief 1-sentence note confirming this overview is synthesized for Tubiq learners.
 
 Return only valid JSON matching the schema.`;
 

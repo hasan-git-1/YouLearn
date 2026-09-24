@@ -1,5 +1,5 @@
 /**
- * YouLearn — Query Intent Classifier (Phase 1B)
+ * Tubiq — Query Intent Classifier (Phase 1B)
  *
  * Implements the intent → category ranking rules from spec section 5.
  * Pure deterministic logic — no LLM, no DB calls.

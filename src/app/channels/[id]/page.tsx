@@ -17,10 +17,10 @@ interface ChannelPageProps {
 export async function generateMetadata({ params }: ChannelPageProps): Promise<Metadata> {
   const { id } = await params;
   const channel = await db.query.channels.findFirst({ where: eq(channels.id, id) });
-  if (!channel) return { title: 'Channel Not Found — YouLearn' };
+  if (!channel) return { title: 'Channel Not Found — Tubiq' };
   return {
-    title: `${channel.name} — YouLearn`,
-    description: channel.description?.slice(0, 160) ?? `Explore ${channel.name}'s videos on YouLearn.`,
+    title: `${channel.name} — Tubiq`,
+    description: channel.description?.slice(0, 160) ?? `Explore ${channel.name}'s videos on Tubiq.`,
   };
 }
 

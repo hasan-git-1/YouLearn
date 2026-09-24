@@ -14,9 +14,9 @@ interface CoursePageProps {
 export async function generateMetadata({ params }: CoursePageProps): Promise<Metadata> {
   const { id } = await params;
   const playlist = await db.query.playlists.findFirst({ where: eq(playlists.id, id) });
-  if (!playlist) return { title: 'Course Not Found — YouLearn' };
+  if (!playlist) return { title: 'Course Not Found — Tubiq' };
   return {
-    title: `${playlist.title} — YouLearn`,
+    title: `${playlist.title} — Tubiq`,
     description: `Full course: ${playlist.title}. ${playlist.videoCount ?? 0} videos${
       playlist.estimatedDurationSeconds ? ` · ${formatDuration(playlist.estimatedDurationSeconds)}` : ''
     }.`,

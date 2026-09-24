@@ -1,5 +1,5 @@
 /**
- * YouLearn — YouTube API Quota Tracker
+ * Tubiq — YouTube API Quota Tracker
  *
  * Enforces the hard rule from spec section 1:
  *   - Log/alert at 80% of daily quota (8,000 units)

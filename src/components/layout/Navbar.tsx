@@ -79,7 +79,7 @@ export function Navbar() {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            YouLearn
+            Tubiq
           </span>
         </Link>
 

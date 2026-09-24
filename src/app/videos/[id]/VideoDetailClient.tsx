@@ -107,7 +107,7 @@ export function VideoDetailClient({ video, playlist }: VideoDetailClientProps) {
                       <Play size={32} fill="white" color="white" />
                     </div>
                     <span className="text-sm font-medium text-white opacity-90">
-                      Play on YouLearn
+                      Play on Tubiq
                     </span>
                   </button>
 

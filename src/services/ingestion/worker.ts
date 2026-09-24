@@ -1,5 +1,5 @@
 /**
- * YouLearn — Core Ingestion Worker
+ * Tubiq — Core Ingestion Worker
  *
  * Given a topic string, this module:
  *   1. Checks quota headroom before starting

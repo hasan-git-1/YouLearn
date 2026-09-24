@@ -14,8 +14,8 @@ interface ProgressContextType {
 
 const ProgressContext = createContext<ProgressContextType | undefined>(undefined);
 
-const LOCAL_COMPLETED_KEY = 'youlearn_completed_videos';
-const LOCAL_SAVED_KEY = 'youlearn_saved_items';
+const LOCAL_COMPLETED_KEY = 'tubiq_completed_videos';
+const LOCAL_SAVED_KEY = 'tubiq_saved_items';
 
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

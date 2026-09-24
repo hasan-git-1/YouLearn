@@ -23,10 +23,10 @@ interface TopicPageProps {
 export async function generateMetadata({ params }: TopicPageProps): Promise<Metadata> {
   const { slug } = await params;
   const topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
-  if (!topic) return { title: 'Topic Not Found — YouLearn' };
+  if (!topic) return { title: 'Topic Not Found — Tubiq' };
   return {
-    title: `${topic.name} — YouLearn`,
-    description: topic.description ?? `Discover the best YouTube content to learn ${topic.name}. Courses, videos, podcasts and top creators — curated by YouLearn.`,
+    title: `${topic.name} — Tubiq`,
+    description: topic.description ?? `Discover the best YouTube content to learn ${topic.name}. Courses, videos, podcasts and top creators — curated by Tubiq.`,
   };
 }
 

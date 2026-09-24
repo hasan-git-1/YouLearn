@@ -1,4 +1,4 @@
--- YouLearn — Initial Database Migration
+-- Tubiq — Initial Database Migration
 -- Run against a Supabase Postgres instance (pgvector enabled by default)
 -- Or run: CREATE EXTENSION IF NOT EXISTS vector; on self-hosted Postgres first.
 

@@ -1,5 +1,5 @@
 /**
- * YouLearn — YouTube Data API v3 Client
+ * Tubiq — YouTube Data API v3 Client
  *
  * ⚠️  HARD RULE (spec section 1):
  *     This is the ONLY file in the entire codebase that may import googleapis.

@@ -7,9 +7,9 @@ import { TopicsClient } from './TopicsClient';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Explore All Topics — YouLearn',
+  title: 'Explore All Topics — Tubiq',
   description:
-    'Browse all indexed learning topics on YouLearn. Courses, videos, podcasts, and creators — curated from YouTube.',
+    'Browse all indexed learning topics on Tubiq. Courses, videos, podcasts, and creators — curated from YouTube.',
 };
 
 export default async function TopicsPage() {
