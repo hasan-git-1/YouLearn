@@ -8,6 +8,7 @@ import { HeroHeadline } from './HeroHeadline';
 import { CommandSearch } from './CommandSearch';
 import { FloatingEcosystemCards } from './FloatingEcosystemCards';
 import { FloatingTopicSignals } from './FloatingTopicSignals';
+import { ExploreUniverseSection } from './ExploreUniverseSection';
 import { InteractiveProductSimulation } from './InteractiveProductSimulation';
 import { DiscoveryBento } from './DiscoveryBento';
 import { KnowledgeArchitecture } from './KnowledgeArchitecture';
@@ -30,8 +31,8 @@ export function HomeClient({ allTopics }: HomeClientProps) {
         <KnowledgeUniverseCanvas />
       </motion.div>
 
-      {/* ── Fullscreen Main Hero Experience ────────────────────────────── */}
-      <section className="relative z-10 flex flex-col items-center justify-center min-h-[92vh] px-4 pt-10 pb-24 text-center">
+      {/* ── 01: HERO / TUBIQ APPLICATION ───────────────────────────────── */}
+      <section className="relative z-10 flex flex-col items-center justify-center min-h-[92vh] px-4 pt-10 pb-20 text-center">
         {/* Soft blue-violet atmospheric glow */}
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[500px] pointer-events-none rounded-full blur-[140px] opacity-15"
@@ -41,7 +42,7 @@ export function HomeClient({ allTopics }: HomeClientProps) {
           aria-hidden="true"
         />
 
-        {/* Exactly 3 Subtle Peripheral Signals (Node.js, Machine Learning, Data Science) */}
+        {/* Peripheral Signals (Node.js, Machine Learning, Data Science) */}
         <FloatingTopicSignals />
 
         {/* Exactly 4 Floating Content Cards */}
@@ -49,18 +50,18 @@ export function HomeClient({ allTopics }: HomeClientProps) {
           <FloatingEcosystemCards />
         </div>
 
-        {/* Central Hero Column (Uncompromised negative space & razor focus) */}
+        {/* Central Hero Column */}
         <div className="relative z-20 max-w-3xl mx-auto flex flex-col items-center w-full">
-          {/* Badge, Editorial Headline & Subtitle */}
+          {/* Headline & Subtitle */}
           <HeroHeadline />
 
-          {/* Command Search & Single Row of 6 Topic Chips */}
+          {/* Command Search & Topic Chips */}
           <div className="w-full">
             <CommandSearch />
           </div>
         </div>
 
-        {/* Subtle Celestial Scroll Indicator */}
+        {/* Celestial Scroll Indicator */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.65 }}
@@ -81,17 +82,22 @@ export function HomeClient({ allTopics }: HomeClientProps) {
         </motion.div>
       </section>
 
-      {/* ── Product Demonstration: Live Simulation ───────────────────────── */}
+      {/* ── 02: EXPLORE SECTION ────────────────────────────────────────── */}
+      <div className="relative z-10">
+        <ExploreUniverseSection />
+      </div>
+
+      {/* ── 03: TUBIQ SYNTHESIS / REAL KNOWLEDGE ───────────────────────── */}
       <div className="relative z-10">
         <InteractiveProductSimulation />
       </div>
 
-      {/* ── Discovery Section: Bento Grid ────────────────────────────────── */}
+      {/* ── 04: KNOWLEDGE ECOSYSTEM / DISCOVERY ─────────────────────────── */}
       <div className="relative z-10">
         <DiscoveryBento topicsList={allTopics} />
       </div>
 
-      {/* ── Architecture Pillars: How Tubiq Works ───────────────────────── */}
+      {/* ── 05: INTELLIGENT KNOWLEDGE UNIVERSE ─────────────────────────── */}
       <div className="relative z-10">
         <KnowledgeArchitecture />
       </div>
