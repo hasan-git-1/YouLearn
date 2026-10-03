@@ -4,7 +4,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Cpu, GitMerge, CheckCircle, Database, Network, ArrowRight } from 'lucide-react';
 
-const STAGES = [
+const STAGES: {
+  step: string;
+  stage: string;
+  title: string;
+  subtitle: string;
+  subheading: string;
+  description: string;
+  icon: () => React.ReactNode;
+  borderColor: string;
+  accent: string;
+  status: string;
+}[] = [
   {
     step: '01',
     stage: 'STAGE 01',
@@ -13,7 +24,7 @@ const STAGES = [
     subheading: 'Filtering out the 99% fluff',
     description:
       'We crawl verified instructional domains on YouTube, discarding low-retention clickbait, sponsor bloat, and AI voice slop to isolate genuine pedagogical signal.',
-    icon: <Database size={20} className="text-cyan-400" />,
+    icon: () => <Database size={20} className="text-cyan-400" />,
     borderColor: 'hover:border-cyan-500/40',
     accent: 'from-cyan-500/20 to-transparent',
     status: 'Verified Deterministic',
@@ -26,7 +37,7 @@ const STAGES = [
     subheading: 'Courses vs. Podcasts vs. Deep Dives',
     description:
       'Using dual-tier heuristic rules and Gemini structured classification, every piece of content is categorized by format, difficulty, and instructional rigor.',
-    icon: <Cpu size={20} className="text-violet-400" />,
+    icon: () => <Cpu size={20} className="text-violet-400" />,
     borderColor: 'hover:border-violet-500/40',
     accent: 'from-violet-500/20 to-transparent',
     status: 'Verified Deterministic',
@@ -39,7 +50,7 @@ const STAGES = [
     subheading: 'Synthesizing discrete videos into curriculums',
     description:
       'Isolated videos are connected into structured milestone learning tracks: Foundations → Core Patterns → Production Architecture, with estimated completion times.',
-    icon: <GitMerge size={20} className="text-indigo-400" />,
+    icon: () => <GitMerge size={20} className="text-indigo-400" />,
     borderColor: 'hover:border-indigo-500/40',
     accent: 'from-indigo-500/20 to-transparent',
     status: 'Verified Deterministic',
@@ -52,7 +63,7 @@ const STAGES = [
     subheading: 'Always rooted in real YouTube content',
     description:
       'Unlike generic LLMs that hallucinate fake book titles and broken course links, every single item in Tubiq is an indexed, verifiable video or playlist with real creator attribution.',
-    icon: <ShieldCheck size={20} className="text-emerald-400" />,
+    icon: () => <ShieldCheck size={20} className="text-emerald-400" />,
     borderColor: 'hover:border-emerald-500/40',
     accent: 'from-emerald-500/20 to-transparent',
     status: 'Verified Deterministic',
@@ -104,7 +115,7 @@ export function KnowledgeArchitecture() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-105 transition-transform">
-                  {s.icon}
+                  {s.icon()}
                 </div>
                 <span className="text-xs font-mono font-extrabold text-gray-400 group-hover:text-indigo-400 transition-colors">
                   {s.step}

@@ -6,6 +6,7 @@
  * Renders categorized results in intent-ranked order.
  */
 
+import type React from 'react';
 import { GraduationCap, Video, Mic, Zap, Users, Wifi } from 'lucide-react';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
@@ -49,14 +50,14 @@ function LiveResultsIndicator({ query }: { query: string }) {
 
 const CATEGORY_META: Record<
   keyof SearchResultCategories,
-  { label: string; icon: React.ReactNode; twoColumn?: boolean }
+  { label: string; icon: () => React.ReactNode; twoColumn?: boolean }
 > = {
-  courses: { label: 'Courses', icon: <GraduationCap size={18} color="white" /> },
+  courses: { label: 'Courses', icon: () => <GraduationCap size={18} color="white" /> },
   // CANONICAL ORDER: Podcasts renders BEFORE Videos per spec (Issue 3)
-  podcasts: { label: 'Podcasts', icon: <Mic size={18} color="white" /> },
-  videos: { label: 'Videos', icon: <Video size={18} color="white" /> },
-  shorts: { label: 'Shorts', icon: <Zap size={18} color="white" /> },
-  creators: { label: 'Creators', icon: <Users size={18} color="white" />, twoColumn: true },
+  podcasts: { label: 'Podcasts', icon: () => <Mic size={18} color="white" /> },
+  videos: { label: 'Videos', icon: () => <Video size={18} color="white" /> },
+  shorts: { label: 'Shorts', icon: () => <Zap size={18} color="white" /> },
+  creators: { label: 'Creators', icon: () => <Users size={18} color="white" />, twoColumn: true },
 };
 
 interface SearchResultsProps {
@@ -167,7 +168,7 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                 <CategorySection
                   id="courses"
                   title={CATEGORY_META.courses.label}
-                  icon={CATEGORY_META.courses.icon}
+                  icon={CATEGORY_META.courses.icon()}
                   count={items.length}
                 >
                   {items.slice(0, limit).map((course) => (
@@ -186,7 +187,7 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                 <CategorySection
                   id="podcasts"
                   title={CATEGORY_META.podcasts.label}
-                  icon={CATEGORY_META.podcasts.icon}
+                  icon={CATEGORY_META.podcasts.icon()}
                   count={items.length}
                 >
                   {items.slice(0, limit).map((video) => (
@@ -205,7 +206,7 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                 <CategorySection
                   id="videos"
                   title={CATEGORY_META.videos.label}
-                  icon={CATEGORY_META.videos.icon}
+                  icon={CATEGORY_META.videos.icon()}
                   count={items.length}
                 >
                   {items.slice(0, limit).map((video) => (
@@ -224,7 +225,7 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                 <CategorySection
                   id="shorts"
                   title={CATEGORY_META.shorts.label}
-                  icon={CATEGORY_META.shorts.icon}
+                  icon={CATEGORY_META.shorts.icon()}
                   count={items.length}
                 >
                   {items.slice(0, limit).map((video) => (
@@ -243,7 +244,7 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                 <CategorySection
                   id="creators"
                   title={CATEGORY_META.creators.label}
-                  icon={CATEGORY_META.creators.icon}
+                  icon={CATEGORY_META.creators.icon()}
                   count={items.length}
                   twoColumn
                 >

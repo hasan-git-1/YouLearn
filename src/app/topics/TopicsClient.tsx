@@ -33,15 +33,15 @@ const CATEGORY_MAP: Record<string, string[]> = {
   Academics: ['upsc-preparation', 'physics-jee-neet', 'mathematics', 'english-communication'],
 };
 
-const TOPIC_ICONS: Record<string, { icon: React.ReactNode; color: string; badge: string }> = {
-  'full-stack-web-development': { icon: <Code2 size={24} />, color: 'from-indigo-500 to-violet-600', badge: 'High Demand' },
-  'ai-engineering': { icon: <Cpu size={24} />, color: 'from-violet-500 to-fuchsia-600', badge: 'Trending' },
-  'data-science': { icon: <BarChart3 size={24} />, color: 'from-cyan-500 to-blue-600', badge: 'Core Field' },
-  'python-programming': { icon: <Terminal size={24} />, color: 'from-emerald-500 to-teal-600', badge: 'Popular' },
-  'system-design': { icon: <ShieldCheck size={24} />, color: 'from-amber-500 to-orange-600', badge: 'Advanced' },
-  'devops-cloud-engineering': { icon: <Globe size={24} />, color: 'from-blue-500 to-indigo-600', badge: 'Cloud' },
-  'react-development': { icon: <Zap size={24} />, color: 'from-sky-400 to-blue-600', badge: 'Frontend' },
-  'next-js': { icon: <Flame size={24} />, color: 'from-neutral-200 to-neutral-400 text-black', badge: 'Full Stack' },
+const TOPIC_ICONS: Record<string, { icon: () => React.ReactNode; color: string; badge: string }> = {
+  'full-stack-web-development': { icon: () => <Code2 size={24} />, color: 'from-indigo-500 to-violet-600', badge: 'High Demand' },
+  'ai-engineering': { icon: () => <Cpu size={24} />, color: 'from-violet-500 to-fuchsia-600', badge: 'Trending' },
+  'data-science': { icon: () => <BarChart3 size={24} />, color: 'from-cyan-500 to-blue-600', badge: 'Core Field' },
+  'python-programming': { icon: () => <Terminal size={24} />, color: 'from-emerald-500 to-teal-600', badge: 'Popular' },
+  'system-design': { icon: () => <ShieldCheck size={24} />, color: 'from-amber-500 to-orange-600', badge: 'Advanced' },
+  'devops-cloud-engineering': { icon: () => <Globe size={24} />, color: 'from-blue-500 to-indigo-600', badge: 'Cloud' },
+  'react-development': { icon: () => <Zap size={24} />, color: 'from-sky-400 to-blue-600', badge: 'Frontend' },
+  'next-js': { icon: () => <Flame size={24} />, color: 'from-neutral-200 to-neutral-400 text-black', badge: 'Full Stack' },
 };
 
 export function TopicsClient({ topics }: TopicsClientProps) {
@@ -230,7 +230,7 @@ export function TopicsClient({ topics }: TopicsClientProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {filteredTopics.map((topic) => {
               const meta = TOPIC_ICONS[topic.slug] ?? {
-                icon: <Code2 size={24} />,
+                icon: () => <Code2 size={24} />,
                 color: 'from-indigo-500 to-violet-600',
                 badge: 'Curated',
               };
@@ -262,7 +262,7 @@ export function TopicsClient({ topics }: TopicsClientProps) {
                     <div
                       className={`flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br ${meta.color} text-white shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform`}
                     >
-                      {meta.icon}
+                      {meta.icon()}
                     </div>
 
                     <span

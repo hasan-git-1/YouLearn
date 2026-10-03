@@ -14,14 +14,25 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-const EXPLORE_DISCIPLINES = [
+const EXPLORE_DISCIPLINES: {
+  id: string;
+  title: string;
+  description: string;
+  tag: string;
+  tagColor: string;
+  icon: () => React.ReactNode;
+  modules: string;
+  creators: string;
+  href: string;
+  accentBorder: string;
+}[] = [
   {
     id: 'ai-engineering',
     title: 'AI Engineering & Agents',
     description: 'LLM orchestrations, RAG pipelines, fine-tuning, and multi-agent systems.',
     tag: 'Trending',
     tagColor: 'text-violet-400 border-violet-500/30 bg-violet-500/10',
-    icon: <Sparkles size={18} className="text-violet-400" />,
+    icon: () => <Sparkles size={18} className="text-violet-400" />,
     modules: '28 Modules',
     creators: '8 Top Creators',
     href: '/topics/ai-engineering',
@@ -33,7 +44,7 @@ const EXPLORE_DISCIPLINES = [
     description: 'Next.js 16, React Server Components, TypeScript, and modern DB migrations.',
     tag: 'Foundational',
     tagColor: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10',
-    icon: <Layers size={18} className="text-cyan-400" />,
+    icon: () => <Layers size={18} className="text-cyan-400" />,
     modules: '36 Modules',
     creators: '12 Projects',
     href: '/topics/full-stack-web-development',
@@ -45,7 +56,7 @@ const EXPLORE_DISCIPLINES = [
     description: 'High-scale concurrency, microservices, consistent hashing, and database sharding.',
     tag: 'Advanced',
     tagColor: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
-    icon: <Network size={18} className="text-amber-400" />,
+    icon: () => <Network size={18} className="text-amber-400" />,
     modules: '22 Deep Dives',
     creators: 'Senior Level',
     href: '/topics/system-design',
@@ -57,7 +68,7 @@ const EXPLORE_DISCIPLINES = [
     description: 'FastAPI, Metaprogramming, Polars, and production algorithmic patterns.',
     tag: 'Popular',
     tagColor: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-    icon: <Terminal size={18} className="text-emerald-400" />,
+    icon: () => <Terminal size={18} className="text-emerald-400" />,
     modules: '24 Modules',
     creators: 'Hands-on',
     href: '/topics',
@@ -69,7 +80,7 @@ const EXPLORE_DISCIPLINES = [
     description: 'PyTorch internals, neural network architectures, backprop, and optimization.',
     tag: 'Core ML',
     tagColor: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10',
-    icon: <Cpu size={18} className="text-indigo-400" />,
+    icon: () => <Cpu size={18} className="text-indigo-400" />,
     modules: '19 Modules',
     creators: 'Theoretical & Code',
     href: '/topics',
@@ -81,7 +92,7 @@ const EXPLORE_DISCIPLINES = [
     description: 'Algorithmic trading basics, DCF models, portfolio theory, and macroeconomics.',
     tag: 'Finance',
     tagColor: 'text-rose-400 border-rose-500/30 bg-rose-500/10',
-    icon: <TrendingUp size={18} className="text-rose-400" />,
+    icon: () => <TrendingUp size={18} className="text-rose-400" />,
     modules: '16 Deep Dives',
     creators: 'Quantitative',
     href: '/topics',
@@ -143,7 +154,7 @@ export function ExploreUniverseSection() {
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.05] border border-white/10 group-hover:scale-105 transition-transform">
-                  {disc.icon}
+                  {disc.icon()}
                 </div>
                 <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${disc.tagColor}`}>
                   {disc.tag}
