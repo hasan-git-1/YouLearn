@@ -24,7 +24,7 @@ async function triggerIngestion(query: string) {
     const { inngest } = await import('@/jobs/ingestion');
     await inngest.send({
       name: 'app/topic.ingest',
-      data: { topic: query, maxSearchCalls: 2, skipIfRecent: false },
+      data: { topic: query, maxSearchCalls: 5, skipIfRecent: false },
     });
   } catch (e) {
     console.error('[SearchResults] Could not trigger ingestion:', e);
@@ -63,11 +63,13 @@ interface SearchResultsProps {
   limit?: number;
 }
 
-export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
+export async function SearchResults({ query, limit = 15 }: SearchResultsProps) {
   // Direct service call — no HTTP overhead
+  // pool=50 gives each section up to 50 items; CategorySection shows 5 by default
+  // and reveals the rest via "View More" without re-querying YouTube.
   let searchData;
   try {
-    searchData = await keywordSearch({ q: query, limit });
+    searchData = await keywordSearch({ q: query, pool: 50 });
   } catch (error) {
     console.error('[SearchResults] DB error:', error);
     return <DBErrorState />;
@@ -153,8 +155,9 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                   title={CATEGORY_META.courses.label}
                   icon={CATEGORY_META.courses.icon()}
                   count={items.length}
+                  defaultVisible={5}
                 >
-                  {items.slice(0, limit).map((course) => (
+                  {items.map((course) => (
                     <CourseCard key={course.id} course={course as Playlist} />
                   ))}
                 </CategorySection>
@@ -172,8 +175,9 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                   title={CATEGORY_META.podcasts.label}
                   icon={CATEGORY_META.podcasts.icon()}
                   count={items.length}
+                  defaultVisible={5}
                 >
-                  {items.slice(0, limit).map((video) => (
+                  {items.map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
@@ -191,8 +195,9 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                   title={CATEGORY_META.videos.label}
                   icon={CATEGORY_META.videos.icon()}
                   count={items.length}
+                  defaultVisible={5}
                 >
-                  {items.slice(0, limit).map((video) => (
+                  {items.map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
@@ -210,8 +215,9 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                   title={CATEGORY_META.shorts.label}
                   icon={CATEGORY_META.shorts.icon()}
                   count={items.length}
+                  defaultVisible={5}
                 >
-                  {items.slice(0, limit).map((video) => (
+                  {items.map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
@@ -230,8 +236,9 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
                   icon={CATEGORY_META.creators.icon()}
                   count={items.length}
                   twoColumn
+                  defaultVisible={5}
                 >
-                  {items.slice(0, limit).map((ch) => (
+                  {items.map((ch) => (
                     <CreatorCard key={ch.id} channel={ch as Channel} />
                   ))}
                 </CategorySection>

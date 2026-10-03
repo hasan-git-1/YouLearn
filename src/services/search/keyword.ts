@@ -19,8 +19,33 @@ import { validateContentType, validateDifficulty } from '@/services/classificati
 
 export interface KeywordSearchOptions {
   q: string;
-  limit?: number;          // results per category; default 12
+  /** Items per category in the result pool (default 50). CategorySection controls the 5/View-More split. */
+  pool?: number;
+  /** @deprecated Use pool instead — kept for legacy callers */
+  limit?: number;
   topicSlug?: string;      // filter to a specific topic
+}
+
+/**
+ * Search is intentionally conservative at read time too. It protects users
+ * from older rows indexed before the ingestion relevance gate was introduced.
+ */
+export function matchesQueryStrictly(query: string, title: string, description: string | null): boolean {
+  const tokens = query.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  if (tokens.length === 0) return false;
+  const text = `${title} ${description ?? ''}`.toLowerCase();
+  const aliases: Record<string, string[]> = {
+    dev: ['development', 'developer'],
+    js: ['javascript'],
+    ts: ['typescript'],
+  };
+  const matched = tokens.filter((token) =>
+    text.includes(token) || (aliases[token] ?? []).some((alias) => text.includes(alias))
+  ).length;
+
+  // A multi-word intent needs all its terms; a one-word intent needs its
+  // explicit topic word. This deliberately rejects adjacent generic content.
+  return matched === tokens.length;
 }
 
 /**
@@ -33,7 +58,11 @@ export interface KeywordSearchOptions {
 export async function keywordSearch(
   options: KeywordSearchOptions
 ): Promise<SearchResultCategories & { totalResults: number }> {
-  const { q, limit = 12 } = options;
+  // `pool` is the number of items fetched per category for the UI to work with.
+  // CategorySection will show the first 5 and reveal the rest via "View More".
+  // Default is 50 to give a generous View More reserve.
+  const { q, pool = 50, limit } = options;
+  const fetchLimit = pool ?? limit ?? 50; // backcompat: if only `limit` provided, honour it
 
   // Sanitize query for tsvector — replace special chars, trim whitespace
   const sanitizedQ = q.trim().replace(/[^\w\s]/g, ' ').trim();
@@ -76,25 +105,26 @@ export async function keywordSearch(
     LEFT JOIN channels c ON c.id = v.channel_id
     WHERE v.search_vector @@ to_tsquery('english', ${tsQuery})
     ORDER BY rank DESC, v.view_count DESC NULLS LAST
-    LIMIT ${limit * 5}
+    LIMIT ${Math.max(fetchLimit * 5, 250)}
   `);
 
-  const allVideoRows = (videoRows.rows ?? []) as Array<Record<string, unknown>>;
+  const allVideoRows = ((videoRows.rows ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => matchesQueryStrictly(q, row.title as string, row.description as string | null));
 
   // ── Separate by content_type ──────────────────────────────────────────────
   const videoResults = allVideoRows
     .filter((r) => r.content_type === 'video' || r.content_type === 'lecture' || r.content_type === 'interview')
-    .slice(0, limit)
+    .slice(0, fetchLimit)
     .map(normalizeVideoRow);
 
   const podcastResults = allVideoRows
     .filter((r) => r.content_type === 'podcast')
-    .slice(0, limit)
+    .slice(0, fetchLimit)
     .map(normalizeVideoRow);
 
   const shortResults = allVideoRows
     .filter((r) => r.content_type === 'short')
-    .slice(0, limit)
+    .slice(0, fetchLimit)
     .map(normalizeVideoRow);
 
   // ── Search courses (playlists marked is_course=true) ─────────────────────
@@ -124,10 +154,13 @@ export async function keywordSearch(
       p.is_course = true
       AND setweight(to_tsvector('english', coalesce(p.title, '')), 'A') @@ to_tsquery('english', ${tsQuery})
     ORDER BY rank DESC, p.video_count DESC NULLS LAST
-    LIMIT ${limit}
+    LIMIT ${Math.max(fetchLimit, 50)}
   `);
 
-  const courseResults = ((courseRows.rows ?? []) as Array<Record<string, unknown>>).map(normalizeCourseRow);
+  const courseResults = ((courseRows.rows ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => matchesQueryStrictly(q, row.title as string, null))
+    .slice(0, fetchLimit)
+    .map(normalizeCourseRow);
 
   // ── Search creators (channels) ────────────────────────────────────────────
   // Find channels that appear frequently in relevant videos
@@ -139,36 +172,31 @@ export async function keywordSearch(
     }
   }
 
-  // Sort channels by appearance frequency
-  const topChannelIds = [...channelIdCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([id]) => id);
+  const relevantChannelIds = [...channelIdCounts.keys()];
 
   let creatorResults: SearchResultCategories['creators'] = [];
 
-  if (topChannelIds.length > 0) {
+  if (relevantChannelIds.length > 0) {
     const channelRows = await db
       .select()
       .from(channels)
-      .where(inArray(channels.id, topChannelIds))
-      .limit(limit);
+      .where(inArray(channels.id, relevantChannelIds));
 
-    // Sort back to frequency order
-    const channelMap = new Map(channelRows.map((c) => [c.id, c]));
-    creatorResults = topChannelIds
-      .map((id) => channelMap.get(id))
-      .filter(Boolean)
+    // Only channels that produced relevant videos are considered. Within that
+    // set, subscribers are the stated quality/ranking signal.
+    creatorResults = channelRows
+      .sort((a, b) => (b.subscriberCount ?? 0) - (a.subscriberCount ?? 0))
+      .slice(0, 15) // 10-15 creators per spec
       .map((c) => ({
-        id: c!.id,
-        youtubeChannelId: c!.youtubeChannelId,
-        name: c!.name,
-        description: c!.description,
-        subscriberCount: c!.subscriberCount,
-        videoCount: c!.videoCount,
-        thumbnailUrl: c!.thumbnailUrl,
+        id: c.id,
+        youtubeChannelId: c.youtubeChannelId,
+        name: c.name,
+        description: c.description,
+        subscriberCount: c.subscriberCount,
+        videoCount: c.videoCount,
+        thumbnailUrl: c.thumbnailUrl,
         contentSource: 'youtube' as const,
-        lastSyncedAt: c!.lastSyncedAt,
+        lastSyncedAt: c.lastSyncedAt,
       }));
   }
 
