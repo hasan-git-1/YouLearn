@@ -2,29 +2,34 @@
  * Database migration runner
  * Usage: npx tsx src/db/migrate.ts
  *
- * Runs 0001_initial.sql against the configured DATABASE_URL.
- * Safe to run multiple times — all statements use IF NOT EXISTS.
+ * Runs all SQL migrations in src/db/migrations in sequence.
+ * Safe to run multiple times.
  */
 
 import { loadEnvConfig } from '@next/env';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 loadEnvConfig(process.cwd());
 
 async function main() {
-  // Load the pool only after @next/env has read .env.local.
   const { pool } = await import('./index');
-  const sqlPath = join(__dirname, 'migrations', '0001_initial.sql');
-  const sql = readFileSync(sqlPath, 'utf8');
+  const migrationsDir = join(__dirname, 'migrations');
+  const files = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
 
   console.log('[migrate] Connecting to database...');
   const client = await pool.connect();
 
   try {
-    console.log('[migrate] Running 0001_initial.sql...');
-    await client.query(sql);
-    console.log('[migrate] ✓ Migration complete!');
+    for (const file of files) {
+      console.log(`[migrate] Running ${file}...`);
+      const sql = readFileSync(join(migrationsDir, file), 'utf8');
+      await client.query(sql);
+      console.log(`[migrate] ✓ ${file} applied successfully.`);
+    }
+    console.log('[migrate] ✓ All migrations complete!');
   } finally {
     client.release();
     await pool.end();

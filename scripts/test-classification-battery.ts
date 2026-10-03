@@ -6,7 +6,7 @@ interface TestCase {
   query: string;
   validTypes: string[];
   forbiddenTypes: string[];
-  video: RawYouTubeVideo;
+  video: Partial<RawYouTubeVideo> & { id: string; title: string; duration: string; channelTitle: string };
 }
 
 const testCases: TestCase[] = [
@@ -190,7 +190,7 @@ let passed = 0;
 let failed = 0;
 
 for (const tc of testCases) {
-  const result = classifyVideo(tc.video);
+  const result = classifyVideo(tc.video as RawYouTubeVideo);
   const isValid = tc.validTypes.includes(result.contentType);
   const isForbidden = tc.forbiddenTypes.includes(result.contentType);
 
