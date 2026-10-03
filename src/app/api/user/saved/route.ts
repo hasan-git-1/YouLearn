@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { db } from '@/db';
-import { users, savedContent } from '@/db/schema';
+import { users, savedContent, videos, playlists } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 export async function GET() {
@@ -66,8 +66,19 @@ export async function POST(request: NextRequest) {
     }
 
     const { contentId, contentType = 'video' } = await request.json();
-    if (!contentId) {
+    if (!contentId || typeof contentId !== 'string') {
       return NextResponse.json({ error: 'contentId is required' }, { status: 400 });
+    }
+    if (contentType !== 'video' && contentType !== 'playlist') {
+      return NextResponse.json({ error: 'Unsupported contentType' }, { status: 400 });
+    }
+
+    // Do not allow stale or fabricated IDs to become saved_content orphans.
+    const contentExists = contentType === 'video'
+      ? await db.query.videos.findFirst({ where: eq(videos.id, contentId), columns: { id: true } })
+      : await db.query.playlists.findFirst({ where: eq(playlists.id, contentId), columns: { id: true } });
+    if (!contentExists) {
+      return NextResponse.json({ error: 'Content not found' }, { status: 404 });
     }
 
     await db.insert(users).values({ id: user.id, email: user.email ?? '' }).onConflictDoNothing();

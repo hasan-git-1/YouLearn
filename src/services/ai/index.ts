@@ -360,7 +360,7 @@ Description: ${metadata.description?.slice(0, 500) ?? 'N/A'}`;
     }
 
     // Step 4 from spec: confidence < 0.5 for non-video types — default to video
-    if (parsed.content_type !== 'video' && parsed.content_type_confidence < 0.5) {
+    if (!Number.isFinite(parsed.content_type_confidence) || (parsed.content_type !== 'video' && parsed.content_type_confidence < 0.6)) {
       console.warn(`[AI] classifyWithLLMFallback: low confidence (${parsed.content_type_confidence}) for "${parsed.content_type}" — defaulting to video`);
       return null;
     }

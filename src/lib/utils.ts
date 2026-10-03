@@ -54,8 +54,11 @@ export function getYouTubeWatchUrl(videoId: string): string {
 }
 
 /** Get YouTube channel URL */
-export function getYouTubeChannelUrl(channelId: string): string {
-  return `https://www.youtube.com/channel/${channelId}`;
+export function getYouTubeChannelUrl(channelId: string | null | undefined): string | null {
+  // A canonical YouTube channel ID is always `UC` plus 22 URL-safe chars.
+  // Never substitute an internal database UUID for a missing source ID.
+  if (!channelId || !/^UC[\w-]{22}$/.test(channelId)) return null;
+  return `https://www.youtube.com/channel/${encodeURIComponent(channelId)}`;
 }
 
 /** Get YouTube playlist URL */

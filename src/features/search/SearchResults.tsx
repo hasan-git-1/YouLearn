@@ -7,14 +7,13 @@
  */
 
 import type React from 'react';
-import { GraduationCap, Video, Mic, Zap, Users, Wifi } from 'lucide-react';
+import { GraduationCap, Video, Mic, Zap, Users, Clock3 } from 'lucide-react';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
 import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
 import { keywordSearch } from '@/services/search/keyword';
-import { fastSearch } from '@/services/search/fast';
 import { classifyIntent } from '@/services/search/intent';
 import { generateTopicOverview } from '@/services/ai';
 import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
@@ -33,16 +32,15 @@ async function triggerIngestion(query: string) {
 }
 
 // Live results indicator for fast search
-function LiveResultsIndicator({ query }: { query: string }) {
+function ColdStartState({ query }: { query: string }) {
   return (
-    <div className="mb-8 animate-fade-up flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-      <Wifi size={16} className="text-emerald-400 animate-pulse" />
-      <span>Showing live YouTube results for <strong style={{ color: 'var(--text-primary)' }}>&ldquo;{query}&rdquo;</strong></span>
-      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-        Live
-      </span>
-      <p className="text-xs max-w-md text-center" style={{ color: 'var(--text-muted)' }}>
-        These are real-time results from YouTube. Full indexing with AI summaries takes ~3-5 minutes.
+    <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-up">
+      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-elevated)', color: 'var(--brand-primary)' }}>
+        <Clock3 size={26} />
+      </div>
+      <h2 className="mb-2 text-xl font-bold" style={{ color: 'var(--text-primary)' }}>We&apos;re preparing this topic</h2>
+      <p className="max-w-md text-sm" style={{ color: 'var(--text-secondary)' }}>
+        We don&apos;t have indexed learning resources for &ldquo;{query}&rdquo; yet. It has been queued for indexing; please check back shortly.
       </p>
     </div>
   );
@@ -78,24 +76,14 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
   const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
 
   // Cold start: no results in DB yet — use fast direct YouTube search
-  let isLiveResults = false;
-  let liveSearchData: typeof searchData | null = null;
-
   if (totalResults === 0) {
     // Trigger background ingestion (non-blocking)
     void triggerIngestion(query);
 
-    // Fetch live results from YouTube API directly
-    try {
-      liveSearchData = await fastSearch({ q: query, limit });
-      isLiveResults = true;
-    } catch (e) {
-      console.error('[SearchResults] Fast search error:', e);
-    }
+    return <ColdStartState query={query} />;
   }
 
-  // Use live data if available, otherwise DB data
-  const displayData = isLiveResults && liveSearchData ? liveSearchData : searchData;
+  const displayData = searchData;
   const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
 
   // Classify intent to determine section order
@@ -103,7 +91,7 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
 
   // Generate AI overview (only for DB results, not live)
   let aiOverview = null;
-  if (!isLiveResults && totalResults > 0) {
+  if (totalResults > 0) {
     try {
       const allContent = [
         ...courses.map((c) => ({ title: c.title, description: null, contentType: 'course' })),
@@ -129,17 +117,12 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
           <span className="gradient-text">&ldquo;{query}&rdquo;</span>
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {isLiveResults
-            ? `${displayData.totalResults} live results from YouTube`
-            : `${totalResults} items across ${categoryOrder.filter((cat) => {
-                const map = { courses, videos, podcasts, shorts, creators };
-                return (map[cat]?.length ?? 0) > 0;
-              }).length} categories`}
+          {`${totalResults} items across ${categoryOrder.filter((cat) => {
+            const map = { courses, videos, podcasts, shorts, creators };
+            return (map[cat]?.length ?? 0) > 0;
+          }).length}`}
         </p>
       </div>
-
-      {/* Live results indicator */}
-      {isLiveResults && <LiveResultsIndicator query={query} />}
 
       {/* AI Topic Overview (only for DB results) */}
       {aiOverview && (

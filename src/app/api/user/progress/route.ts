@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { db } from '@/db';
-import { users, watchHistory } from '@/db/schema';
+import { users, watchHistory, videos } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export async function GET() {
@@ -42,8 +42,16 @@ export async function POST(request: NextRequest) {
     }
 
     const { videoId } = await request.json();
-    if (!videoId) {
+    if (!videoId || typeof videoId !== 'string') {
       return NextResponse.json({ error: 'videoId is required' }, { status: 400 });
+    }
+
+    const video = await db.query.videos.findFirst({
+      where: eq(videos.id, videoId),
+      columns: { id: true },
+    });
+    if (!video) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
 
     // Ensure user exists in Postgres

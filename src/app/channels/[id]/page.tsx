@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 import { db } from '@/db';
 import { channels, videos } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -38,6 +37,7 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
 
   const subscribers = formatCount(channel.subscriberCount ?? undefined);
   const videoCount = formatCount(channel.videoCount ?? undefined);
+  const youtubeChannelUrl = getYouTubeChannelUrl(channel.youtubeChannelId);
 
   const initials = channel.name
     .split(' ')
@@ -108,14 +108,20 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
               </p>
             )}
 
-            <a
-              href={getYouTubeChannelUrl(channel.youtubeChannelId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost py-2 px-4 text-xs inline-flex items-center gap-1.5"
-            >
-              <ExternalLink size={13} /> View on YouTube
-            </a>
+            {youtubeChannelUrl ? (
+              <a
+                href={youtubeChannelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost py-2 px-4 text-xs inline-flex items-center gap-1.5"
+              >
+                <ExternalLink size={13} /> View on YouTube
+              </a>
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                This channel&apos;s YouTube link is unavailable while its source data is refreshed.
+              </p>
+            )}
           </div>
         </div>
       </section>

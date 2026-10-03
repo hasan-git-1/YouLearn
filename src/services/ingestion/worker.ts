@@ -43,15 +43,12 @@ import { hasQuotaFor } from '@/services/youtube/quota';
 import {
   classifyVideo,
   classifyCoursePlaylist,
-  inferDifficulty,
   validateContentType,
   validateDifficulty,
 } from '@/services/classification/rules';
+import { classifyWithLLMFallback } from '@/services/ai';
 import type {
   IngestionJobInput,
-  RawYouTubeVideo,
-  RawYouTubePlaylist,
-  QuotaExceededError,
 } from '@/types';
 import { eq, and } from 'drizzle-orm';
 
@@ -188,7 +185,12 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
     const channelIdMap = new Map<string, string>(); // youtubeChannelId → internal uuid
 
     for (const ch of rawChannels) {
-      if (!ch.id) continue;
+      // YouTube's canonical channel resource IDs are UC + 22 URL-safe chars.
+      // Skip malformed API data rather than persisting an unusable external link.
+      if (!ch.id || !/^UC[\w-]{22}$/.test(ch.id)) {
+        console.warn(`[ingestion] Skipping channel with invalid YouTube ID: ${ch.id || '(missing)'}`);
+        continue;
+      }
 
       const [existing] = await db
         .select({ id: channels.id })
@@ -304,8 +306,30 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
       const channelUUID = channelIdMap.get(rawVideo.channelId) || null;
       const durationSec = parseDurationToSeconds(rawVideo.duration);
 
-      // Classify content type using rule engine
-      const classification = classifyVideo(rawVideo);
+      // Rules resolve clear course/short/format signals. Use Gemini only for
+      // ambiguous items, so it cannot override deterministic classifications.
+      const ruleClassification = classifyVideo(rawVideo);
+      const rawChannel = rawChannels.find((channel) => channel.id === rawVideo.channelId);
+      const aiClassification = ruleClassification.confidence <= 0.5 && process.env.GEMINI_API_KEY
+        ? await classifyWithLLMFallback({
+            title: rawVideo.title,
+            description: rawVideo.description || null,
+            durationSeconds: durationSec,
+            channelTitle: rawChannel?.title,
+            channelDescription: rawChannel?.description || null,
+          })
+        : null;
+      const classification = aiClassification && aiClassification.content_type_confidence >= 0.6
+        ? {
+            contentType: aiClassification.content_type,
+            difficulty: aiClassification.difficulty,
+            topics: aiClassification.topics,
+          }
+        : {
+            contentType: ruleClassification.contentType,
+            difficulty: ruleClassification.difficulty,
+            topics: [],
+          };
 
       const [existing] = await db
         .select({ id: videos.id })
@@ -339,6 +363,7 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
             likeCount: parseInt(rawVideo.likeCount, 10) || null,
             contentType: validateContentType(classification.contentType),
             difficulty: validateDifficulty(classification.difficulty),
+            aiTopics: classification.topics,
             lastSyncedAt: new Date(),
           })
           .returning({ id: videos.id });
