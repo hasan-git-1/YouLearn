@@ -50,7 +50,7 @@ export function HeroHeadline() {
         color: 'var(--text-primary)',
       }}
     >
-      <div className="flex flex-wrap justify-center gap-x-3.5 gap-y-1 mb-1">
+      <div className="flex flex-wrap justify-center gap-x-3.5 gap-y-1 mb-1.5">
         {line1.split(' ').map((word, i) => (
           <motion.span
             key={`l1-${i}`}
@@ -62,7 +62,7 @@ export function HeroHeadline() {
         ))}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-3.5 gap-y-1">
+      <div className="flex flex-wrap justify-center gap-x-3.5 gap-y-1 mb-1.5">
         {line2.split(' ').map((word, i) => (
           <motion.span
             key={`l2-${i}`}
@@ -72,6 +72,9 @@ export function HeroHeadline() {
             {word}
           </motion.span>
         ))}
+      </div>
+
+      <div className="flex justify-center">
         <motion.span
           variants={wordVariants}
           className="inline-block relative font-black"
@@ -79,10 +82,10 @@ export function HeroHeadline() {
           <span
             className="relative z-10"
             style={{
-              background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 30%, #c084fc 70%, #38bdf8 100%)',
+              background: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 35%, #a855f7 70%, #c084fc 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              textShadow: '0 0 35px rgba(99, 102, 241, 0.35)',
+              textShadow: '0 0 45px rgba(99, 102, 241, 0.45)',
             }}
           >
             {line3Highlight}
@@ -92,9 +95,9 @@ export function HeroHeadline() {
             initial={{ scaleX: 0, opacity: 0 }}
             animate={{ scaleX: 1, opacity: 1 }}
             transition={{ delay: 0.85, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
-            className="absolute left-0 bottom-1 w-full h-[2px] rounded-full origin-left pointer-events-none"
+            className="absolute left-0 bottom-1 w-full h-[2.5px] rounded-full origin-left pointer-events-none"
             style={{
-              background: 'linear-gradient(90deg, transparent, #818cf8, #38bdf8, transparent)',
+              background: 'linear-gradient(90deg, transparent, #38bdf8, #818cf8, #a855f7, transparent)',
             }}
           />
         </motion.span>

@@ -129,7 +129,6 @@ export function KnowledgeUniverseCanvas({
         return preset;
       }
     }
-    // Generic fallback preset when user types an unrecognized custom query
     if (clean.length >= 3) {
       return {
         root: query.trim(),
@@ -145,74 +144,67 @@ export function KnowledgeUniverseCanvas({
     return null;
   }, []);
 
-  // Initialize random cosmic nodes
+  // Initialize refined, lower-density cosmic nodes (45% reduction, zero text labels by default)
   const initCosmicNodes = useCallback((width: number, height: number) => {
     const nodes: Node[] = [];
     const colors = {
-      course: { main: '#a855f7', glow: 'rgba(168, 85, 247, 0.5)' },
-      video: { main: '#06b6d4', glow: 'rgba(6, 182, 212, 0.5)' },
-      podcast: { main: '#f59e0b', glow: 'rgba(245, 158, 11, 0.5)' },
-      creator: { main: '#10b981', glow: 'rgba(16, 185, 129, 0.5)' },
-      concept: { main: '#6366f1', glow: 'rgba(99, 102, 241, 0.5)' },
+      course: { main: '#a855f7', glow: 'rgba(168, 85, 247, 0.45)' },
+      video: { main: '#06b6d4', glow: 'rgba(6, 182, 212, 0.45)' },
+      podcast: { main: '#f59e0b', glow: 'rgba(245, 158, 11, 0.45)' },
+      creator: { main: '#10b981', glow: 'rgba(16, 185, 129, 0.45)' },
+      concept: { main: '#6366f1', glow: 'rgba(99, 102, 241, 0.45)' },
       particle: { main: '#94a3b8', glow: 'rgba(148, 163, 184, 0.2)' },
     };
 
-    const labels = [
-      { text: 'System Design', type: 'course' as const },
-      { text: 'React 19', type: 'video' as const },
-      { text: 'AI Agents', type: 'concept' as const },
-      { text: 'FastAPI', type: 'course' as const },
-      { text: 'Vector RAG', type: 'concept' as const },
-      { text: 'Data Engineering', type: 'creator' as const },
-      { text: 'Postgres Internals', type: 'podcast' as const },
-      { text: 'TypeScript 5.8', type: 'video' as const },
-      { text: 'Docker & K8s', type: 'course' as const },
-      { text: 'Machine Learning', type: 'concept' as const },
-      { text: 'Distributed Systems', type: 'podcast' as const },
-      { text: 'Web Security', type: 'creator' as const },
-      { text: 'Next.js Turbopack', type: 'video' as const },
-      { text: 'Microservices', type: 'concept' as const },
-      { text: 'High Scale Redis', type: 'course' as const },
+    // Major peripheral orbs (only 8 major orbs positioned around the outer canvas)
+    const types: ('course' | 'video' | 'podcast' | 'creator' | 'concept')[] = [
+      'course', 'video', 'concept', 'creator', 'podcast', 'video', 'course', 'concept'
     ];
 
-    // Main labeled clusters
-    labels.forEach((item, i) => {
-      const palette = colors[item.type];
-      const angle = (i / labels.length) * Math.PI * 2 + Math.random() * 0.4;
-      const dist = Math.min(width, height) * (0.22 + (i % 3) * 0.12);
+    types.forEach((t, i) => {
+      const palette = colors[t];
+      const angle = (i / types.length) * Math.PI * 2 + 0.3;
+      // Position them in the outer margins of the screen, away from the hero center
+      const dist = Math.min(width, height) * 0.42;
       const cx = width / 2;
-      const cy = height / 2;
+      const cy = height * 0.48;
 
       nodes.push({
         id: `major-${i}`,
         x: cx + Math.cos(angle) * dist,
-        y: cy + Math.sin(angle) * dist * 0.75,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        baseRadius: Math.random() * 2 + 4.5,
+        y: cy + Math.sin(angle) * dist * 0.78,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        baseRadius: Math.random() * 2 + 4,
         radius: 4.5,
         color: palette.main,
         glowColor: palette.glow,
-        label: item.text,
-        type: item.type,
+        label: '', // No default text label in cosmic mode — extreme clarity!
+        type: t,
         pulsePhase: Math.random() * Math.PI * 2,
         clusterId: i % 4,
       });
     });
 
-    // Secondary ambient connective nodes
-    const ambientCount = Math.min(28, Math.floor((width * height) / 38000));
+    // Secondary ambient connective nodes (only ~12 nodes)
+    const ambientCount = 12;
     for (let i = 0; i < ambientCount; i++) {
-      const types: ('concept' | 'video' | 'particle')[] = ['concept', 'video', 'particle'];
-      const t = types[i % types.length];
+      const t = i % 2 === 0 ? 'concept' : 'video';
       const palette = colors[t];
+
+      // Spawn in outer quadrants, avoiding hero center
+      const isLeft = i % 2 === 0;
+      const rx = isLeft
+        ? Math.random() * (width * 0.28) + 40
+        : width - (Math.random() * (width * 0.28) + 40);
+      const ry = Math.random() * (height * 0.85) + 40;
 
       nodes.push({
         id: `ambient-${i}`,
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: (Math.random() - 0.5) * 0.25,
+        x: rx,
+        y: ry,
+        vx: (Math.random() - 0.5) * 0.14,
+        vy: (Math.random() - 0.5) * 0.14,
         baseRadius: Math.random() * 1.5 + 2,
         radius: 2.5,
         color: palette.main,
@@ -226,14 +218,14 @@ export function KnowledgeUniverseCanvas({
     nodesRef.current = nodes;
   }, []);
 
-  // Reorganize nodes into structured semantic constellation when topic is active
+  // Reorganize nodes into structured semantic constellation when topic is actively searched
   const organizeGraph = useCallback(
     (preset: KnowledgeGraphTopic, width: number, height: number) => {
       const nodes = nodesRef.current;
       if (!nodes.length) return;
 
       const cx = width / 2;
-      const cy = height * 0.46; // slightly above vertical center to frame hero headline
+      const cy = height * 0.44;
 
       // Node 0 is the root node
       if (nodes[0]) {
@@ -244,7 +236,7 @@ export function KnowledgeUniverseCanvas({
         nodes[0].type = 'root';
         nodes[0].color = '#6366f1';
         nodes[0].glowColor = 'rgba(99, 102, 241, 0.9)';
-        nodes[0].baseRadius = 8;
+        nodes[0].baseRadius = 7;
       }
 
       const branchCount = preset.branches.length;
@@ -254,7 +246,7 @@ export function KnowledgeUniverseCanvas({
         const branchAngle = (bIdx / branchCount) * Math.PI * 2 - Math.PI / 2;
         const branchDist = Math.min(width, height) * 0.28;
         const bx = cx + Math.cos(branchAngle) * branchDist;
-        const by = cy + Math.sin(branchAngle) * branchDist * 0.85;
+        const by = cy + Math.sin(branchAngle) * branchDist * 0.82;
 
         if (nodes[nodeIdx]) {
           nodes[nodeIdx].targetX = bx;
@@ -262,46 +254,46 @@ export function KnowledgeUniverseCanvas({
           nodes[nodeIdx].isOrganized = true;
           nodes[nodeIdx].label = branch.name;
           nodes[nodeIdx].type = branch.type;
-          nodes[nodeIdx].baseRadius = 6;
+          nodes[nodeIdx].baseRadius = 5.5;
           nodeIdx++;
         }
 
-        // Child leaves of this branch
         if (branch.children) {
           branch.children.forEach((childName, cIdx) => {
             if (nodes[nodeIdx]) {
               const spread = (cIdx - (branch.children!.length - 1) / 2) * 0.45;
               const leafAngle = branchAngle + spread;
-              const leafDist = branchDist + Math.min(width, height) * 0.14;
+              const leafDist = branchDist + Math.min(width, height) * 0.13;
               nodes[nodeIdx].targetX = cx + Math.cos(leafAngle) * leafDist;
-              nodes[nodeIdx].targetY = cy + Math.sin(leafAngle) * leafDist * 0.85;
+              nodes[nodeIdx].targetY = cy + Math.sin(leafAngle) * leafDist * 0.82;
               nodes[nodeIdx].isOrganized = true;
               nodes[nodeIdx].label = childName;
               nodes[nodeIdx].type = 'concept';
-              nodes[nodeIdx].baseRadius = 3.5;
+              nodes[nodeIdx].baseRadius = 3;
               nodeIdx++;
             }
           });
         }
       });
 
-      // Remaining nodes become ambient peripheral satellites
       for (let i = nodeIdx; i < nodes.length; i++) {
         nodes[i].isOrganized = false;
         nodes[i].targetX = undefined;
         nodes[i].targetY = undefined;
+        nodes[i].label = '';
       }
     },
     []
   );
 
-  // Reset graph back to ambient drift
+  // Reset graph back to ambient drift (clear all labels)
   const relaxGraph = useCallback(() => {
     nodesRef.current.forEach((n) => {
       n.isOrganized = false;
       n.targetX = undefined;
       n.targetY = undefined;
-      n.baseRadius = n.type === 'particle' ? 2 : 4.5;
+      n.label = '';
+      n.baseRadius = n.type === 'particle' ? 2 : 4;
     });
   }, []);
 
@@ -327,7 +319,6 @@ export function KnowledgeUniverseCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Respect reduced motion preference
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -366,7 +357,6 @@ export function KnowledgeUniverseCanvas({
     window.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Pause when canvas not in view
     const observer = new IntersectionObserver(([entry]) => {
       isVisibleRef.current = entry.isIntersecting;
     });
@@ -389,10 +379,10 @@ export function KnowledgeUniverseCanvas({
 
       ctx.clearRect(0, 0, w, h);
 
-      // ── 1. Fine Technical Coordinate Grid ─────────────────────────────
-      const gridSize = 64;
+      // ── 1. Soft Subtle Technical Grid ──────────────────────────────────
+      const gridSize = 72;
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.022)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.016)';
       ctx.lineWidth = 1;
       ctx.beginPath();
 
@@ -405,18 +395,40 @@ export function KnowledgeUniverseCanvas({
         ctx.lineTo(w, y);
       }
       ctx.stroke();
-
-      // Technical crosshairs at intersections
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.14)';
-      for (let x = gridSize * 2; x < w; x += gridSize * 4) {
-        for (let y = gridSize * 2; y < h; y += gridSize * 4) {
-          ctx.fillRect(x - 2, y, 5, 1);
-          ctx.fillRect(x, y - 2, 1, 5);
-        }
-      }
       ctx.restore();
 
-      // ── 2. Ambient Cursor Halo ────────────────────────────────────────
+      // ── 2. Celestial Horizon Arc (Bottom of Hero) ──────────────────────
+      const horizonY = h * 0.94;
+      const horizonRadius = Math.max(w * 0.85, 800);
+      ctx.save();
+      // Glow under celestial horizon
+      const horizGlow = ctx.createRadialGradient(
+        w / 2,
+        horizonY + horizonRadius - 40,
+        horizonRadius - 80,
+        w / 2,
+        horizonY + horizonRadius - 40,
+        horizonRadius + 120
+      );
+      horizGlow.addColorStop(0, 'rgba(99, 102, 241, 0.28)');
+      horizGlow.addColorStop(0.3, 'rgba(6, 182, 212, 0.10)');
+      horizGlow.addColorStop(0.7, 'rgba(8, 11, 20, 0.85)');
+      horizGlow.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = horizGlow;
+      ctx.beginPath();
+      ctx.arc(w / 2, horizonY + horizonRadius - 40, horizonRadius + 120, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.fill();
+
+      // Luminous rim line
+      ctx.beginPath();
+      ctx.arc(w / 2, horizonY + horizonRadius - 40, horizonRadius, Math.PI * 1.18, Math.PI * 1.82);
+      ctx.strokeStyle = 'rgba(129, 140, 248, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+
+      // ── 3. Ambient Cursor Halo ─────────────────────────────────────────
       const mouse = mouseRef.current;
       if (mouse.active) {
         const glowGrad = ctx.createRadialGradient(
@@ -425,56 +437,72 @@ export function KnowledgeUniverseCanvas({
           0,
           mouse.x,
           mouse.y,
-          240
+          200
         );
-        glowGrad.addColorStop(0, 'rgba(99, 102, 241, 0.08)');
-        glowGrad.addColorStop(0.5, 'rgba(6, 182, 212, 0.03)');
+        glowGrad.addColorStop(0, 'rgba(99, 102, 241, 0.06)');
+        glowGrad.addColorStop(0.6, 'rgba(6, 182, 212, 0.02)');
         glowGrad.addColorStop(1, 'transparent');
         ctx.fillStyle = glowGrad;
-        ctx.fillRect(mouse.x - 240, mouse.y - 240, 480, 480);
+        ctx.fillRect(mouse.x - 200, mouse.y - 200, 400, 400);
       }
 
-      // ── 3. Physics & Node Movement ────────────────────────────────────
+      // ── 4. Physics & Node Movement with Hero Exclusion Zone ────────────
       const nodes = nodesRef.current;
-      const speedMultiplier = prefersReducedMotion ? 0.05 : 1;
+      const speedMultiplier = prefersReducedMotion ? 0.04 : 0.75;
+
+      // Central exclusion zone: keeps nodes from passing through headline & search bar
+      const heroCenterX = w / 2;
+      const heroCenterY = h * 0.44;
+      const zoneRadiusX = Math.min(w * 0.36, 420);
+      const zoneRadiusY = 220;
 
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
-        n.pulsePhase += dt * 1.5;
+        n.pulsePhase += dt * 1.2;
 
         if (n.isOrganized && n.targetX !== undefined && n.targetY !== undefined) {
-          // Smooth spring interpolation toward target cluster positions
           const dx = n.targetX - n.x;
           const dy = n.targetY - n.y;
           n.x += dx * (prefersReducedMotion ? 0.95 : 0.08);
           n.y += dy * (prefersReducedMotion ? 0.95 : 0.08);
         } else {
-          // Organic drift
           n.x += n.vx * speedMultiplier;
           n.y += n.vy * speedMultiplier;
 
-          // Bounce off boundaries with soft damping
-          if (n.x < 30) { n.x = 30; n.vx *= -1; }
-          if (n.x > w - 30) { n.x = w - 30; n.vx *= -1; }
-          if (n.y < 30) { n.y = 30; n.vy *= -1; }
-          if (n.y > h - 30) { n.y = h - 30; n.vy *= -1; }
+          // Hero Exclusion Zone repulsion (preserves extreme clarity for typography)
+          const normDx = (n.x - heroCenterX) / zoneRadiusX;
+          const normDy = (n.y - heroCenterY) / zoneRadiusY;
+          const distSq = normDx * normDx + normDy * normDy;
+
+          if (distSq < 1 && distSq > 0.001) {
+            const pushFactor = (1 - Math.sqrt(distSq)) * 1.4;
+            const pushAngle = Math.atan2(n.y - heroCenterY, n.x - heroCenterX);
+            n.x += Math.cos(pushAngle) * pushFactor * 6;
+            n.y += Math.sin(pushAngle) * pushFactor * 6;
+          }
+
+          // Soft bounce boundaries
+          if (n.x < 40) { n.x = 40; n.vx *= -1; }
+          if (n.x > w - 40) { n.x = w - 40; n.vx *= -1; }
+          if (n.y < 40) { n.y = 40; n.vy *= -1; }
+          if (n.y > h - 80) { n.y = h - 80; n.vy *= -1; }
         }
 
-        // Cursor interaction (gentle repulsion)
+        // Gentle cursor magnetic repulsion
         if (mouse.active) {
           const mdx = n.x - mouse.x;
           const mdy = n.y - mouse.y;
           const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
-          if (mdist < 140 && mdist > 0) {
-            const force = (1 - mdist / 140) * 1.5;
+          if (mdist < 130 && mdist > 0) {
+            const force = (1 - mdist / 130) * 1.2;
             n.x += (mdx / mdist) * force;
             n.y += (mdy / mdist) * force;
           }
         }
       }
 
-      // ── 4. Connection Lines & Traveling Photons ───────────────────────
-      const connectionThreshold = Math.min(w, h) * 0.22;
+      // ── 5. Fine Connection Lines & Travelling Photons ──────────────────
+      const connectionThreshold = Math.min(w, h) * 0.26;
       ctx.lineWidth = 1;
 
       for (let i = 0; i < nodes.length; i++) {
@@ -487,11 +515,11 @@ export function KnowledgeUniverseCanvas({
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           const shouldConnect =
-            (a.isOrganized && b.isOrganized && dist < connectionThreshold * 1.6) ||
+            (a.isOrganized && b.isOrganized && dist < connectionThreshold * 1.4) ||
             dist < connectionThreshold;
 
           if (shouldConnect) {
-            const alpha = Math.max(0, 1 - dist / (connectionThreshold * 1.3)) * 0.25;
+            const alpha = Math.max(0, 1 - dist / (connectionThreshold * 1.2)) * 0.18;
             const lineGrad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
             lineGrad.addColorStop(0, a.color);
             lineGrad.addColorStop(1, b.color);
@@ -503,13 +531,13 @@ export function KnowledgeUniverseCanvas({
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
 
-            // Periodically spawn photons along connections
-            if (!prefersReducedMotion && Math.random() < 0.0025 && photonsRef.current.length < 18) {
+            // Photons
+            if (!prefersReducedMotion && Math.random() < 0.002 && photonsRef.current.length < 10) {
               photonsRef.current.push({
                 fromNode: a,
                 toNode: b,
                 progress: 0,
-                speed: 0.35 + Math.random() * 0.4,
+                speed: 0.35 + Math.random() * 0.3,
                 color: a.color,
               });
             }
@@ -519,7 +547,7 @@ export function KnowledgeUniverseCanvas({
 
       ctx.globalAlpha = 1;
 
-      // ── 5. Render Data Photons ────────────────────────────────────────
+      // ── 6. Render Data Photons ─────────────────────────────────────────
       const photons = photonsRef.current;
       for (let i = photons.length - 1; i >= 0; i--) {
         const p = photons[i];
@@ -535,19 +563,19 @@ export function KnowledgeUniverseCanvas({
 
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = p.color;
         ctx.beginPath();
-        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // ── 6. Render Nodes & High-Tech Labels ─────────────────────────────
+      // ── 7. Render Glowing Nodes & Organized Labels ─────────────────────
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i];
-        const pulse = Math.sin(n.pulsePhase) * 0.3 + 1;
+        const pulse = Math.sin(n.pulsePhase) * 0.25 + 1;
         const currentRadius = n.baseRadius * pulse;
 
         // Outer glow
@@ -557,21 +585,21 @@ export function KnowledgeUniverseCanvas({
           0,
           n.x,
           n.y,
-          currentRadius * 4.2
+          currentRadius * 3.8
         );
         glow.addColorStop(0, n.glowColor);
         glow.addColorStop(1, 'transparent');
         ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(n.x, n.y, currentRadius * 4.2, 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, currentRadius * 3.8, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pulsing radar ring on key root / major nodes
+        // Pulsing radar ring on key cluster or organized nodes
         if (n.type === 'root' || n.isOrganized) {
           ctx.strokeStyle = n.color;
-          ctx.globalAlpha = (Math.sin(n.pulsePhase * 1.5) * 0.5 + 0.5) * 0.4;
+          ctx.globalAlpha = (Math.sin(n.pulsePhase * 1.4) * 0.5 + 0.5) * 0.35;
           ctx.beginPath();
-          ctx.arc(n.x, n.y, currentRadius * 3, 0, Math.PI * 2);
+          ctx.arc(n.x, n.y, currentRadius * 2.8, 0, Math.PI * 2);
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
@@ -582,37 +610,35 @@ export function KnowledgeUniverseCanvas({
         ctx.arc(n.x, n.y, currentRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bright white center dot
+        // Center white dot
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(n.x, n.y, Math.max(1, currentRadius * 0.35), 0, Math.PI * 2);
+        ctx.arc(n.x, n.y, Math.max(1, currentRadius * 0.3), 0, Math.PI * 2);
         ctx.fill();
 
-        // High-tech typography label for named nodes
-        if (n.label) {
+        // ONLY draw text label if the graph is currently in organized query mode!
+        // This guarantees zero background clutter in standard cosmic idle state.
+        if (n.isOrganized && n.label) {
           ctx.save();
-          ctx.font = n.type === 'root' ? '600 13px system-ui, sans-serif' : '500 10.5px system-ui, sans-serif';
+          ctx.font = n.type === 'root' ? '600 12.5px system-ui, sans-serif' : '500 10px system-ui, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
 
-          // Micro badge pill behind text for high legibility
           const textMetrics = ctx.measureText(n.label);
           const badgeWidth = textMetrics.width + 12;
           const badgeHeight = 18;
           const badgeX = n.x - badgeWidth / 2;
           const badgeY = n.y + currentRadius + 5;
 
-          ctx.fillStyle = 'rgba(8, 11, 20, 0.85)';
+          ctx.fillStyle = 'rgba(8, 11, 20, 0.90)';
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
           ctx.lineWidth = 1;
 
-          // Rounded pill
           ctx.beginPath();
           ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 9);
           ctx.fill();
           ctx.stroke();
 
-          // Text content
           ctx.fillStyle = n.type === 'root' ? '#ffffff' : '#cbd5e1';
           ctx.fillText(n.label, n.x, badgeY + 3);
           ctx.restore();

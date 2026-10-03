@@ -3,94 +3,261 @@
 import React, { useRef } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Link from 'next/link';
-import { BookOpen, Sparkles, Compass, Mic, Star } from 'lucide-react';
+import { ArrowRight, Star, Mic, Play, Box } from 'lucide-react';
 
-interface FloatingCardData {
-  id: string;
-  badge: string;
-  badgeColor: string;
-  title: string;
-  meta: string;
-  extra?: string;
-  icon: React.ReactNode;
-  positionClass: string;
+interface FloatingCardProps {
   delay: number;
-  slug: string;
 }
 
-const CARDS: FloatingCardData[] = [
-  {
-    id: 'card-1',
-    badge: 'COURSE',
-    badgeColor: 'border-violet-500/30 text-violet-300 bg-violet-500/10',
-    title: 'React 19 & Full Stack Patterns',
-    meta: '14h 20m · Hands-on Projects',
-    extra: '99% Match',
-    icon: <BookOpen size={13} className="text-violet-400" />,
-    positionClass: 'hidden lg:block top-16 -left-8 xl:left-4',
-    delay: 0,
-    slug: 'full-stack-web-development',
-  },
-  {
-    id: 'card-2',
-    badge: 'ROADMAP',
-    badgeColor: 'border-cyan-500/30 text-cyan-300 bg-cyan-500/10',
-    title: 'AI Engineering & Vector RAG',
-    meta: '28 videos · 8 top creators',
-    extra: 'Beginner → Prod',
-    icon: <Sparkles size={13} className="text-cyan-400" />,
-    positionClass: 'hidden lg:block top-20 -right-8 xl:right-4',
-    delay: 0.2,
-    slug: 'ai-engineering',
-  },
-  {
-    id: 'card-3',
-    badge: 'SYSTEM DESIGN',
-    badgeColor: 'border-amber-500/30 text-amber-300 bg-amber-500/10',
-    title: 'Distributed Architecture Deep Dive',
-    meta: 'High Scale · Fault Tolerance',
-    extra: 'Senior Level',
-    icon: <Compass size={13} className="text-amber-400" />,
-    positionClass: 'hidden xl:block bottom-16 -left-12 xl:left-8',
-    delay: 0.4,
-    slug: 'system-design',
-  },
-  {
-    id: 'card-4',
-    badge: 'PODCAST',
-    badgeColor: 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10',
-    title: 'Foundations of Modern AI',
-    meta: 'Deep Tech Dialogue · 1h 45m',
-    extra: '4.9 ★ Rating',
-    icon: <Mic size={13} className="text-emerald-400" />,
-    positionClass: 'hidden xl:block bottom-14 -right-12 xl:right-8',
-    delay: 0.6,
-    slug: 'ai-engineering',
-  },
-];
+export function FloatingEcosystemCards() {
+  return (
+    <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-20">
+      {/* ── CARD 1: Top-Left (React 19 & Full Stack Patterns) ─────────── */}
+      <TiltWrapper
+        className="hidden lg:block absolute top-12 left-4 xl:left-8"
+        delay={0.1}
+        floatDuration={6}
+      >
+        <Link
+          href="/topics/full-stack-web-development"
+          className="block w-[300px] p-4 rounded-2xl border border-indigo-500/30 shadow-[0_16px_40px_rgba(0,0,0,0.65)] hover:border-indigo-400/60 transition-all duration-300 group pointer-events-auto"
+          style={{
+            background: 'linear-gradient(135deg, rgba(14, 18, 38, 0.90), rgba(8, 10, 22, 0.94))',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            textDecoration: 'none',
+          }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              {/* Badge */}
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <span className="flex items-center justify-center w-4 h-4 rounded bg-red-500/20 text-red-500">
+                  <Play size={9} className="fill-red-500 ml-0.5" />
+                </span>
+                <span className="text-[11px] font-mono font-medium text-gray-300">
+                  YouTube
+                </span>
+              </div>
 
-function InteractiveTiltCard({ card }: { card: FloatingCardData }) {
-  const cardRef = useRef<HTMLDivElement>(null);
+              {/* Title */}
+              <h4
+                className="text-[13px] font-bold text-white group-hover:text-indigo-300 transition-colors leading-snug mb-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                React 19 &amp; Full Stack Patterns
+              </h4>
 
-  // Mouse tilt values
+              {/* Meta */}
+              <p className="text-[11px] font-mono text-gray-400 flex items-center gap-1.5">
+                <span>12h</span>
+                <span>•</span>
+                <span className="flex items-center gap-0.5 text-amber-400">
+                  4.8 <Star size={10} className="fill-amber-400 inline" />
+                </span>
+              </p>
+            </div>
+
+            {/* Code / React Atom Preview Graphic */}
+            <div className="w-14 h-14 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0">
+              <div className="space-y-1 w-8 opacity-40 mb-1">
+                <div className="h-0.5 w-6 bg-cyan-400 rounded" />
+                <div className="h-0.5 w-4 bg-indigo-400 rounded" />
+              </div>
+              <div className="text-cyan-400 animate-spin" style={{ animationDuration: '14s' }}>
+                <span className="text-sm">⚛</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+      </TiltWrapper>
+
+      {/* ── CARD 2: Top-Right (AI Engineering & Vector RAG) ──────────── */}
+      <TiltWrapper
+        className="hidden lg:block absolute top-14 right-4 xl:right-8"
+        delay={0.25}
+        floatDuration={6.5}
+      >
+        <Link
+          href="/topics/ai-engineering"
+          className="block w-[300px] p-4 rounded-2xl border border-cyan-500/30 shadow-[0_16px_40px_rgba(0,0,0,0.65)] hover:border-cyan-400/60 transition-all duration-300 group pointer-events-auto"
+          style={{
+            background: 'linear-gradient(135deg, rgba(11, 18, 38, 0.90), rgba(7, 11, 24, 0.94))',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            textDecoration: 'none',
+          }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              {/* Badge */}
+              <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-[10px] font-mono font-bold text-cyan-300 mb-2.5">
+                ROADMAP
+              </div>
+
+              {/* Title */}
+              <h4
+                className="text-[13px] font-bold text-white group-hover:text-cyan-300 transition-colors leading-snug mb-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                AI Engineering &amp; Vector RAG
+              </h4>
+
+              {/* Meta */}
+              <p className="text-[11px] font-mono text-gray-400">
+                28 videos • 8 top creators
+              </p>
+            </div>
+
+            {/* 3D Isometric Cube Graphic + Arrow */}
+            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                <Box size={18} className="animate-pulse" />
+              </div>
+              <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-cyan-300 group-hover:translate-x-0.5 transition-all">
+                <ArrowRight size={11} />
+              </div>
+            </div>
+          </div>
+        </Link>
+      </TiltWrapper>
+
+      {/* ── CARD 3: Bottom-Left (Distributed Architecture Deep Dive) ──── */}
+      <TiltWrapper
+        className="hidden xl:block absolute bottom-12 left-4 xl:left-8"
+        delay={0.4}
+        floatDuration={7}
+      >
+        <Link
+          href="/topics/system-design"
+          className="block w-[310px] p-4 rounded-2xl border border-amber-500/30 shadow-[0_16px_40px_rgba(0,0,0,0.65)] hover:border-amber-400/60 transition-all duration-300 group pointer-events-auto"
+          style={{
+            background: 'linear-gradient(135deg, rgba(22, 17, 10, 0.90), rgba(12, 10, 8, 0.94))',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            textDecoration: 'none',
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            {/* System Nodes Graphic */}
+            <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+              <span className="text-xl">⛶</span>
+            </div>
+
+            <div className="flex-1">
+              {/* Badge */}
+              <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono font-bold text-amber-300 mb-1.5">
+                SYSTEM DESIGN
+              </div>
+
+              {/* Title */}
+              <h4
+                className="text-[13px] font-bold text-white group-hover:text-amber-300 transition-colors leading-snug mb-1"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                Distributed Architecture Deep Dive
+              </h4>
+
+              {/* Meta */}
+              <p className="text-[11px] font-mono text-gray-400">
+                High Scale • Fault Tolerance
+              </p>
+            </div>
+
+            {/* Arrow */}
+            <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all flex-shrink-0">
+              <ArrowRight size={11} />
+            </div>
+          </div>
+        </Link>
+      </TiltWrapper>
+
+      {/* ── CARD 4: Bottom-Right (Foundations of Modern AI Podcast) ──── */}
+      <TiltWrapper
+        className="hidden xl:block absolute bottom-12 right-4 xl:right-8"
+        delay={0.55}
+        floatDuration={6.8}
+      >
+        <Link
+          href="/topics/ai-engineering"
+          className="block w-[310px] p-4 rounded-2xl border border-violet-500/30 shadow-[0_16px_40px_rgba(0,0,0,0.65)] hover:border-violet-400/60 transition-all duration-300 group pointer-events-auto"
+          style={{
+            background: 'linear-gradient(135deg, rgba(18, 12, 34, 0.90), rgba(10, 8, 20, 0.94))',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            textDecoration: 'none',
+          }}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              {/* Badge */}
+              <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-[10px] font-mono font-bold text-violet-300 mb-2">
+                PODCAST
+              </div>
+
+              {/* Title */}
+              <h4
+                className="text-[13px] font-bold text-white group-hover:text-violet-300 transition-colors leading-snug mb-1.5"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                Foundations of Modern AI
+              </h4>
+
+              {/* Meta */}
+              <p className="text-[11px] font-mono text-gray-400">
+                Deep Tech Dialogue • 1h 45m
+              </p>
+            </div>
+
+            {/* Mic & Waveform Graphic */}
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                <Mic size={17} />
+              </div>
+              {/* Waveform visualizer */}
+              <div className="flex items-center gap-0.5 h-3">
+                {[4, 8, 12, 7, 10, 5, 9, 3].map((h, i) => (
+                  <span
+                    key={i}
+                    className="w-0.5 bg-violet-400 rounded-full"
+                    style={{ height: `${h}px` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </Link>
+      </TiltWrapper>
+    </div>
+  );
+}
+
+function TiltWrapper({
+  children,
+  className,
+  delay,
+  floatDuration,
+}: {
+  children: React.ReactNode;
+  className: string;
+  delay: number;
+  floatDuration: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
   const mouseXSpring = useSpring(x, { stiffness: 220, damping: 20 });
   const mouseYSpring = useSpring(y, { stiffness: 220, damping: 20 });
 
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ['9deg', '-9deg']);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ['-9deg', '9deg']);
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ['7deg', '-7deg']);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ['-7deg', '7deg']);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = cardRef.current?.getBoundingClientRect();
+    const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    x.set(mouseX / width - 0.5);
-    y.set(mouseY / height - 0.5);
+    x.set(e.clientX - rect.left - rect.width / 2);
+    y.set(e.clientY - rect.top - rect.height / 2);
   };
 
   const handleMouseLeave = () => {
@@ -100,94 +267,31 @@ function InteractiveTiltCard({ card }: { card: FloatingCardData }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.8, delay: 0.4 + card.delay, ease: [0.16, 1, 0.3, 1] as const }}
-      className={`absolute ${card.positionClass} z-20 pointer-events-auto`}
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] as const }}
+      className={className}
       style={{ perspective: 1000 }}
     >
       <motion.div
-        animate={{
-          y: [0, -8, 0],
-        }}
+        animate={{ y: [0, -6, 0] }}
         transition={{
-          duration: 5 + card.delay * 2,
+          duration: floatDuration,
           repeat: Infinity,
           repeatType: 'reverse',
           ease: 'easeInOut',
+          delay,
         }}
       >
         <motion.div
-          ref={cardRef}
+          ref={ref}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          style={{
-            rotateX,
-            rotateY,
-            transformStyle: 'preserve-3d',
-          }}
-          className="relative w-64 p-3.5 rounded-2xl cursor-pointer group transition-shadow duration-300"
+          style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
         >
-          {/* Glass Card Background */}
-          <div
-            className="absolute inset-0 rounded-2xl border border-white/10 group-hover:border-indigo-500/40 transition-colors duration-300 shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(16, 20, 38, 0.88), rgba(9, 12, 24, 0.94))',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-            }}
-          />
-
-          {/* Light sweep indicator */}
-          <div
-            className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{
-              background: 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.22), transparent 70%)',
-            }}
-          />
-
-          <Link href={`/topics/${card.slug}`} className="relative z-10 block" style={{ textDecoration: 'none' }}>
-            {/* Top row */}
-            <div className="flex items-center justify-between mb-2">
-              <span
-                className={`text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded-md border ${card.badgeColor}`}
-              >
-                {card.badge}
-              </span>
-              {card.extra && (
-                <span className="text-[10px] font-mono text-indigo-300/80 flex items-center gap-1">
-                  <Star size={10} className="text-amber-400 fill-amber-400" />
-                  {card.extra}
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h4
-              className="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors line-clamp-1 mb-1"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {card.title}
-            </h4>
-
-            {/* Meta */}
-            <p className="text-[11px] text-gray-400 flex items-center gap-1.5 line-clamp-1">
-              {card.icon}
-              <span>{card.meta}</span>
-            </p>
-          </Link>
+          {children}
         </motion.div>
       </motion.div>
     </motion.div>
-  );
-}
-
-export function FloatingEcosystemCards() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-visible">
-      {CARDS.map((card) => (
-        <InteractiveTiltCard key={card.id} card={card} />
-      ))}
-    </div>
   );
 }

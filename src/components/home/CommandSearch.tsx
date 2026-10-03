@@ -3,7 +3,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Sparkles, BookOpen, Video, Mic, Compass, Terminal } from 'lucide-react';
+import {
+  ArrowRight,
+  Sparkles,
+  BookOpen,
+  Video,
+  Mic,
+  Compass,
+  Terminal,
+  Network,
+  Layers,
+  TrendingUp,
+  Search
+} from 'lucide-react';
 
 interface Suggestion {
   query: string;
@@ -46,12 +58,12 @@ const INTELLIGENT_SUGGESTIONS: Suggestion[] = [
 ];
 
 const TOPIC_CAPSULES = [
-  { label: 'System Design', icon: '🏗️', count: '180+ indexed' },
-  { label: 'React', icon: '⚛️', count: '240+ indexed' },
-  { label: 'AI Engineering', icon: '🤖', count: '310+ indexed' },
-  { label: 'Python', icon: '🐍', count: '400+ indexed' },
-  { label: 'Full Stack', icon: '💻', count: '350+ indexed' },
-  { label: 'Stock Market', icon: '📈', count: '120+ indexed' },
+  { label: 'System Design', icon: <Network size={12} className="text-indigo-400" /> },
+  { label: 'React', icon: <span className="text-cyan-400 text-xs">⚛</span> },
+  { label: 'AI Engineering', icon: <Sparkles size={12} className="text-violet-400" /> },
+  { label: 'Python', icon: <Terminal size={12} className="text-emerald-400" /> },
+  { label: 'Full Stack', icon: <Layers size={12} className="text-cyan-400" /> },
+  { label: 'Stock Market', icon: <TrendingUp size={12} className="text-emerald-400" /> },
 ];
 
 interface CommandSearchProps {
@@ -66,7 +78,6 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Notify parent of query changes for live knowledge graph reorganization
   const handleInputChange = (val: string) => {
     setQuery(val);
     onQueryChange?.(val);
@@ -133,44 +144,31 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
 
   return (
     <div className="w-full max-w-2xl mx-auto relative select-none" ref={containerRef}>
-      {/* ── Main Command Search Box ────────────────────────────────────── */}
+      {/* ── Main Command Search Box (Pill Shape with Electric Violet Glow) ── */}
       <motion.div
         animate={{
-          scale: isFocused ? 1.015 : 1,
+          scale: isFocused ? 1.012 : 1,
           boxShadow: isFocused
-            ? '0 12px 48px rgba(99, 102, 241, 0.28), 0 0 0 1px rgba(99, 102, 241, 0.5)'
-            : '0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+            ? '0 12px 48px rgba(99, 102, 241, 0.35), 0 0 0 1.5px rgba(99, 102, 241, 0.7)'
+            : '0 8px 36px rgba(0, 0, 0, 0.6), 0 0 24px rgba(99, 102, 241, 0.20), 0 0 0 1px rgba(99, 102, 241, 0.35)',
         }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
-        className="relative rounded-2xl group cursor-text"
+        className={`relative group cursor-text transition-all duration-300 ${
+          isFocused ? 'rounded-3xl' : 'rounded-full'
+        }`}
         style={{
           background: isFocused
-            ? 'linear-gradient(135deg, rgba(17, 21, 40, 0.95), rgba(12, 15, 29, 0.98))'
-            : 'linear-gradient(135deg, rgba(13, 17, 32, 0.85), rgba(9, 11, 22, 0.92))',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+            ? 'linear-gradient(135deg, rgba(16, 20, 42, 0.96), rgba(10, 13, 28, 0.98))'
+            : 'linear-gradient(135deg, rgba(12, 16, 34, 0.88), rgba(8, 10, 22, 0.92))',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
         }}
         onClick={() => inputRef.current?.focus()}
       >
-        {/* Subtle moving light sweep on border */}
-        <div
-          className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden"
-          style={{ padding: '1px' }}
-        >
-          <div
-            className="w-full h-full rounded-2xl"
-            style={{
-              background: 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.35), transparent 70%)',
-            }}
-          />
-        </div>
-
-        <div className="relative flex items-center px-4 py-3.5 sm:px-5 sm:py-4 gap-3">
-          {/* Custom Search Glyph / Icon */}
+        <div className="relative flex items-center px-4 py-2.5 sm:px-6 sm:py-3 gap-3">
+          {/* Search Glyph */}
           <div className="flex items-center justify-center text-indigo-400 group-hover:text-indigo-300 transition-colors flex-shrink-0">
-            <span className="text-xl font-light tracking-tighter" style={{ fontFamily: 'monospace' }}>
-              ⌕
-            </span>
+            <Search size={18} />
           </div>
 
           {/* Search Input */}
@@ -182,19 +180,19 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
             onFocus={() => setIsFocused(true)}
             onKeyDown={handleKeyDown}
             placeholder="What do you want to learn?"
-            className="w-full bg-transparent text-white placeholder-gray-400 text-base sm:text-lg outline-none font-normal"
+            className="w-full bg-transparent text-white placeholder-gray-400 text-sm sm:text-base outline-none font-normal"
             style={{ fontFamily: 'var(--font-sans)' }}
             autoComplete="off"
             spellCheck={false}
           />
 
           {/* Keyboard shortcut hint */}
-          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-[11px] font-mono text-gray-400">
+          <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/10 bg-white/5 text-[11px] font-mono text-gray-400">
             <span>⌘</span>
             <span>K</span>
           </div>
 
-          {/* Animated Circular Action Button */}
+          {/* Animated Circular Purple Action Button */}
           <motion.button
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
@@ -203,23 +201,14 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
               executeSearch();
             }}
             aria-label="Search"
-            className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full flex-shrink-0 text-white cursor-pointer relative overflow-hidden transition-all duration-200"
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0 text-white cursor-pointer relative overflow-hidden transition-all duration-200"
             style={{
-              background: query.trim().length >= 2
-                ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                : 'rgba(255, 255, 255, 0.08)',
-              boxShadow: query.trim().length >= 2
-                ? '0 0 20px rgba(99, 102, 241, 0.6)'
-                : 'none',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              boxShadow: '0 0 18px rgba(99, 102, 241, 0.65)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
             }}
           >
-            <ArrowRight
-              size={18}
-              className={`transition-transform duration-200 ${
-                query.trim().length >= 2 ? 'translate-x-0 text-white' : 'text-gray-400 group-hover:translate-x-0.5'
-              }`}
-            />
+            <ArrowRight size={17} className="text-white group-hover:translate-x-0.5 transition-transform" />
           </motion.button>
         </div>
 
@@ -233,7 +222,7 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] as const }}
               className="border-t border-white/10 px-3 py-3 overflow-hidden"
             >
-              <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-mono uppercase text-indigo-400/80">
+              <div className="flex items-center justify-between px-3 py-1 text-[11px] font-mono uppercase text-indigo-400/80">
                 <span className="flex items-center gap-1.5">
                   <Terminal size={11} />
                   Intelligent Suggestions
@@ -276,27 +265,24 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
         </AnimatePresence>
       </motion.div>
 
-      {/* ── Premium Interactive Topic Capsules ──────────────────────────── */}
+      {/* ── Premium Clean Topic Capsules (Matching Mockup) ──────────────── */}
       <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5 mt-5">
         {TOPIC_CAPSULES.map((topic) => {
           const isSelected = query.toLowerCase() === topic.label.toLowerCase();
           return (
             <motion.button
               key={topic.label}
-              whileHover={{ y: -2, scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              whileHover={{ y: -2, scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => handleSelectTopic(topic.label)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 border ${
                 isSelected
-                  ? 'bg-indigo-500/20 text-indigo-300 border-indigo-400 shadow-[0_0_16px_rgba(99,102,241,0.35)]'
-                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-indigo-500/40 hover:text-white hover:bg-indigo-950/30 hover:shadow-[0_0_14px_rgba(99,102,241,0.2)]'
+                  ? 'bg-indigo-500/25 text-indigo-300 border-indigo-400 shadow-[0_0_16px_rgba(99,102,241,0.35)]'
+                  : 'bg-white/[0.04] text-gray-300 border-white/10 hover:border-indigo-500/40 hover:text-white hover:bg-white/[0.08] hover:shadow-[0_0_14px_rgba(99,102,241,0.22)]'
               }`}
             >
-              <span className="text-xs">{topic.icon}</span>
+              <span>{topic.icon}</span>
               <span>{topic.label}</span>
-              <span className="text-[10px] font-mono text-gray-400 hidden md:inline ml-0.5">
-                {topic.count}
-              </span>
             </motion.button>
           );
         })}
