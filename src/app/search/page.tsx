@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { SearchResults } from '@/features/search/SearchResults';
-import { SearchBar } from '@/components/ui/SearchBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,26 +33,7 @@ async function SearchPageContent({ searchParams }: SearchPageProps) {
 
   return (
     <div style={{ minHeight: '100dvh' }}>
-      {/* Search bar header */}
-      <div
-        className="sticky top-[57px] z-40 px-4 py-3"
-        style={{
-          background: 'rgba(8,11,20,0.9)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}
-      >
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <SearchBar
-            initialValue={query}
-            placeholder="Search any topic to learn…"
-            size="default"
-          />
-        </div>
-      </div>
-
-      {/* Results */}
+      {/* Results — the Navbar already provides the search bar on non-home pages */}
       <div className="px-4 py-8" style={{ maxWidth: 1280, margin: '0 auto' }}>
         {query ? (
           <Suspense fallback={<SearchResultsSkeleton />}>

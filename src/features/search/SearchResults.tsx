@@ -6,7 +6,7 @@
  * Renders categorized results in intent-ranked order.
  */
 
-import { GraduationCap, Video, Mic, Zap, Users, Wifi, RefreshCw } from 'lucide-react';
+import { GraduationCap, Video, Mic, Zap, Users, Wifi } from 'lucide-react';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
 import { VideoCard } from '@/components/cards/VideoCard';
@@ -52,8 +52,9 @@ const CATEGORY_META: Record<
   { label: string; icon: React.ReactNode; twoColumn?: boolean }
 > = {
   courses: { label: 'Courses', icon: <GraduationCap size={18} color="white" /> },
-  videos: { label: 'Videos', icon: <Video size={18} color="white" /> },
+  // CANONICAL ORDER: Podcasts renders BEFORE Videos per spec (Issue 3)
   podcasts: { label: 'Podcasts', icon: <Mic size={18} color="white" /> },
+  videos: { label: 'Videos', icon: <Video size={18} color="white" /> },
   shorts: { label: 'Shorts', icon: <Zap size={18} color="white" /> },
   creators: { label: 'Creators', icon: <Users size={18} color="white" />, twoColumn: true },
 };
@@ -144,85 +145,119 @@ export async function SearchResults({ query, limit = 12 }: SearchResultsProps) {
         <AIOverviewCard topicName={query} overview={aiOverview} />
       )}
 
-      {/* Render categories in intent-ranked order */}
+      {/*
+       * Render categories in CANONICAL SPEC ORDER (Issue 3):
+       *   1. Courses       — shown if 1+ exists
+       *   2. Podcasts      — shown ONLY if 1+ exists; omitted entirely otherwise
+       *   3. Videos        — shown if 1+ exists
+       *   4. Shorts        — shown ONLY if 1+ exists; omitted entirely otherwise
+       *   5. Creators      — shown if 1+ exists
+       *
+       * Implemented as a filtered array of section configs so this order
+       * can never be accidentally broken by a future sequential-JSX edit.
+       */}
       <div className="space-y-14">
-        {categoryOrder.map((categoryKey, i) => {
-          const meta = CATEGORY_META[categoryKey];
-          const animDelay = `${i * 0.08}s`;
-
-          if (categoryKey === 'courses') {
-            if (!displayCourses.length) return null;
-            return (
-              <div key="courses" style={{ animationDelay: animDelay }}>
-                <CategorySection id="courses" title={meta.label} icon={meta.icon} count={displayCourses.length}>
-                  {displayCourses.slice(0, limit).map((course) => (
+        {[
+          {
+            key: 'courses' as const,
+            items: displayCourses,
+            alwaysShow: false,
+            render: (items: typeof displayCourses, i: number) => (
+              <div key="courses" style={{ animationDelay: `${i * 0.08}s` }}>
+                <CategorySection
+                  id="courses"
+                  title={CATEGORY_META.courses.label}
+                  icon={CATEGORY_META.courses.icon}
+                  count={items.length}
+                >
+                  {items.slice(0, limit).map((course) => (
                     <CourseCard key={course.id} course={course as Playlist} />
                   ))}
                 </CategorySection>
               </div>
-            );
-          }
-
-          if (categoryKey === 'videos') {
-            if (!displayVideos.length) return null;
-            return (
-              <div key="videos" style={{ animationDelay: animDelay }}>
-                <CategorySection id="videos" title={meta.label} icon={meta.icon} count={displayVideos.length}>
-                  {displayVideos.slice(0, limit).map((video) => (
+            ),
+          },
+          {
+            key: 'podcasts' as const,
+            items: displayPodcasts,
+            alwaysShow: false,
+            render: (items: typeof displayPodcasts, i: number) => (
+              <div key="podcasts" style={{ animationDelay: `${i * 0.08}s` }}>
+                <CategorySection
+                  id="podcasts"
+                  title={CATEGORY_META.podcasts.label}
+                  icon={CATEGORY_META.podcasts.icon}
+                  count={items.length}
+                >
+                  {items.slice(0, limit).map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
               </div>
-            );
-          }
-
-          if (categoryKey === 'podcasts') {
-            if (!displayPodcasts.length) return null;
-            return (
-              <div key="podcasts" style={{ animationDelay: animDelay }}>
-                <CategorySection id="podcasts" title={meta.label} icon={meta.icon} count={displayPodcasts.length}>
-                  {displayPodcasts.slice(0, limit).map((video) => (
+            ),
+          },
+          {
+            key: 'videos' as const,
+            items: displayVideos,
+            alwaysShow: false,
+            render: (items: typeof displayVideos, i: number) => (
+              <div key="videos" style={{ animationDelay: `${i * 0.08}s` }}>
+                <CategorySection
+                  id="videos"
+                  title={CATEGORY_META.videos.label}
+                  icon={CATEGORY_META.videos.icon}
+                  count={items.length}
+                >
+                  {items.slice(0, limit).map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
               </div>
-            );
-          }
-
-          if (categoryKey === 'shorts') {
-            if (!displayShorts.length) return null;
-            return (
-              <div key="shorts" style={{ animationDelay: animDelay }}>
-                <CategorySection id="shorts" title={meta.label} icon={meta.icon} count={displayShorts.length}>
-                  {displayShorts.slice(0, limit).map((video) => (
+            ),
+          },
+          {
+            key: 'shorts' as const,
+            items: displayShorts,
+            alwaysShow: false,
+            render: (items: typeof displayShorts, i: number) => (
+              <div key="shorts" style={{ animationDelay: `${i * 0.08}s` }}>
+                <CategorySection
+                  id="shorts"
+                  title={CATEGORY_META.shorts.label}
+                  icon={CATEGORY_META.shorts.icon}
+                  count={items.length}
+                >
+                  {items.slice(0, limit).map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
                   ))}
                 </CategorySection>
               </div>
-            );
-          }
-
-          if (categoryKey === 'creators') {
-            if (!displayCreators.length) return null;
-            return (
-              <div key="creators" style={{ animationDelay: animDelay }}>
+            ),
+          },
+          {
+            key: 'creators' as const,
+            items: displayCreators,
+            alwaysShow: false,
+            render: (items: typeof displayCreators, i: number) => (
+              <div key="creators" style={{ animationDelay: `${i * 0.08}s` }}>
                 <CategorySection
                   id="creators"
-                  title={meta.label}
-                  icon={meta.icon}
-                  count={displayCreators.length}
+                  title={CATEGORY_META.creators.label}
+                  icon={CATEGORY_META.creators.icon}
+                  count={items.length}
                   twoColumn
                 >
-                  {displayCreators.slice(0, limit).map((ch) => (
+                  {items.slice(0, limit).map((ch) => (
                     <CreatorCard key={ch.id} channel={ch as Channel} />
                   ))}
                 </CategorySection>
               </div>
-            );
-          }
-
-          return null;
-        })}
+            ),
+          },
+        ]
+          // Filter: omit sections with 0 items (Podcasts and Shorts are omit-if-empty per spec)
+          .filter((section) => section.items.length > 0)
+          .map((section, i) => section.render(section.items as never, i))}
       </div>
     </div>
   );

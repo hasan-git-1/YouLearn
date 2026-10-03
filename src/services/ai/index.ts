@@ -234,29 +234,67 @@ Rules:
 
 /**
  * Phase 2 LLM Fallback Classifier for ambiguous content.
+ *
+ * IMPORTANT: This is called ONLY for items that were NOT resolved by
+ * rule-based classification (rules.ts). The caller must have already
+ * determined the item is ambiguous before invoking this.
+ *
+ * Key design decisions:
+ * - "video" is the SAFE DEFAULT when uncertain
+ * - "podcast" requires explicit conversational format signals, NOT just long duration
+ * - A malformed/out-of-schema response is discarded and defaults to "video"
+ * - confidence < 0.5 for podcast/interview → default to "video"
  */
 export async function classifyWithLLMFallback(metadata: {
   title: string;
   description: string | null;
   durationSeconds: number | null;
   channelTitle?: string;
+  channelDescription?: string | null;
 }): Promise<LLMClassificationOutput | null> {
   const ai = getGeminiClient();
   if (!ai) return null;
 
   try {
-    const prompt = `Classify this YouTube content for an educational platform:
+    const systemPrompt = `You are a YouTube content classifier for an educational platform.
+Your job is to classify each item into EXACTLY ONE of these types:
+
+- podcast: Long-form CONVERSATIONAL content. Must have 2+ people in a discussion/interview format.
+  The format is talk-show or interview-style: a HOST interviewing a GUEST, or co-hosts discussing topics.
+  Key signals: multiple speakers, discussion-style, not screen-based, not teaching step-by-step.
+  NOT a podcast: tutorials, courses, explainers, single-person walkthroughs, coding sessions, lectures.
+  
+- video: Tutorials, courses, explainers, single-presenter teaching, project builds, coding walkthroughs,
+  lecture-style content, screen recordings, "how to" content, tech talk by a single person.
+  This is the DEFAULT when uncertain. When in doubt, use "video".
+  A 9-hour Python course is a video, not a podcast. A lecture is a video, not a podcast.
+  
+- interview: A formal interview of a single person (not an ongoing podcast show). Guest-focused,
+  single session, typically on a channel that does not primarily produce podcasts.
+  
+- lecture: Academic/university lecture style, often with slides, very structured syllabus-based content.
+
+- short: Under 90 seconds. Quick tip, snippet, reel-format.
+
+RULES:
+1. Duration alone NEVER determines podcast classification. A 3-hour tutorial is still a video.
+2. Format (conversational discussion vs. instructional teaching) is the deciding signal.
+3. When uncertain between podcast and video, ALWAYS choose video (safe default).
+4. Return confidence < 0.6 if you are not sure.`;
+
+    const userPrompt = `Classify this YouTube content:
 Title: ${metadata.title}
 Channel: ${metadata.channelTitle ?? 'Unknown'}
+Channel Description: ${metadata.channelDescription?.slice(0, 200) ?? 'N/A'}
 Duration: ${metadata.durationSeconds ? `${Math.round(metadata.durationSeconds / 60)} mins` : 'Unknown'}
-Description: ${metadata.description?.slice(0, 400) ?? 'N/A'}`;
+Description: ${metadata.description?.slice(0, 500) ?? 'N/A'}`;
 
     const schema: Schema = {
       type: Type.OBJECT,
       properties: {
         content_type: {
           type: Type.STRING,
-          enum: ['course', 'podcast', 'video', 'short', 'interview', 'lecture'],
+          enum: ['video', 'podcast', 'interview', 'lecture', 'short'],
         },
         content_type_confidence: { type: Type.NUMBER },
         difficulty: {
@@ -280,7 +318,7 @@ Description: ${metadata.description?.slice(0, 400) ?? 'N/A'}`;
 
     const response = await ai.models.generateContent({
       model: DEFAULT_MODEL,
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }],
       config: {
         responseMimeType: 'application/json',
         responseSchema: schema,
@@ -288,14 +326,44 @@ Description: ${metadata.description?.slice(0, 400) ?? 'N/A'}`;
       },
     });
 
-    if (!response.text) return null;
-    const parsed = JSON.parse(response.text) as {
+    if (!response.text) {
+      console.warn('[AI] classifyWithLLMFallback: empty response — defaulting to video');
+      return null;
+    }
+
+    let parsed: {
       content_type: string;
       content_type_confidence: number;
       difficulty: string;
       topics: string[];
       is_likely_fabricated_or_low_quality: boolean;
     };
+
+    try {
+      parsed = JSON.parse(response.text);
+    } catch {
+      console.warn('[AI] classifyWithLLMFallback: JSON parse failed — defaulting to video');
+      return null;
+    }
+
+    // Validate enum values — reject and default if out of schema
+    const ALLOWED_TYPES = new Set(['video', 'podcast', 'interview', 'lecture', 'short']);
+    const ALLOWED_DIFFICULTIES = new Set(['beginner', 'intermediate', 'advanced', 'unknown']);
+
+    if (!ALLOWED_TYPES.has(parsed.content_type)) {
+      console.warn(`[AI] classifyWithLLMFallback: invalid content_type "${parsed.content_type}" — defaulting to video`);
+      return null;
+    }
+
+    if (!ALLOWED_DIFFICULTIES.has(parsed.difficulty)) {
+      parsed.difficulty = 'unknown';
+    }
+
+    // Step 4 from spec: confidence < 0.5 for non-video types — default to video
+    if (parsed.content_type !== 'video' && parsed.content_type_confidence < 0.5) {
+      console.warn(`[AI] classifyWithLLMFallback: low confidence (${parsed.content_type_confidence}) for "${parsed.content_type}" — defaulting to video`);
+      return null;
+    }
 
     return {
       content_type: parsed.content_type as ContentType,

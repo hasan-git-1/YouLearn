@@ -259,36 +259,63 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
             />
           )}
 
-          {/* Content Categories */}
+          {/* Content Categories — canonical spec order: Courses → Podcasts → Videos → Shorts → Creators
+           * Implemented as a filtered array so order is structurally enforced (Issue 3). */}
           <div className="space-y-14">
-            {categoryOrder.map((cat) => {
-              if (cat === 'courses' && displayCourses.length > 0) return (
-                <CategorySection key="courses" id="courses" title="Courses" icon={<GraduationCap size={18} color="white" />} count={displayCourses.length}>
-                  {displayCourses.map((c) => <CourseCard key={c.id} course={c as Playlist} />)}
-                </CategorySection>
-              );
-            if (cat === 'videos' && displayVideos.length > 0) return (
-              <CategorySection key="videos" id="videos" title="Videos" icon={<Video size={18} color="white" />} count={displayVideos.length}>
-                {displayVideos.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
-              </CategorySection>
-            );
-            if (cat === 'podcasts' && displayPodcasts.length > 0) return (
-              <CategorySection key="podcasts" id="podcasts" title="Podcasts" icon={<Mic size={18} color="white" />} count={displayPodcasts.length}>
-                {displayPodcasts.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
-              </CategorySection>
-            );
-            if (cat === 'shorts' && displayShorts.length > 0) return (
-              <CategorySection key="shorts" id="shorts" title="Shorts" icon={<Zap size={18} color="white" />} count={displayShorts.length}>
-                {displayShorts.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
-              </CategorySection>
-            );
-            if (cat === 'creators' && displayCreators.length > 0) return (
-              <CategorySection key="creators" id="creators" title="Creators" icon={<Users size={18} color="white" />} count={displayCreators.length} twoColumn>
-                {displayCreators.map((c) => <CreatorCard key={c.id} channel={c as Channel} />)}
-              </CategorySection>
-            );
-            return null;
-          })}
+            {[
+              {
+                key: 'courses',
+                items: displayCourses,
+                render: (items: typeof displayCourses) =>
+                  items.length > 0 ? (
+                    <CategorySection key="courses" id="courses" title="Courses" icon={<GraduationCap size={18} color="white" />} count={items.length}>
+                      {items.map((c) => <CourseCard key={c.id} course={c as Playlist} />)}
+                    </CategorySection>
+                  ) : null,
+              },
+              {
+                key: 'podcasts',
+                items: displayPodcasts,
+                render: (items: typeof displayPodcasts) =>
+                  items.length > 0 ? (
+                    <CategorySection key="podcasts" id="podcasts" title="Podcasts" icon={<Mic size={18} color="white" />} count={items.length}>
+                      {items.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+                    </CategorySection>
+                  ) : null,
+              },
+              {
+                key: 'videos',
+                items: displayVideos,
+                render: (items: typeof displayVideos) =>
+                  items.length > 0 ? (
+                    <CategorySection key="videos" id="videos" title="Videos" icon={<Video size={18} color="white" />} count={items.length}>
+                      {items.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+                    </CategorySection>
+                  ) : null,
+              },
+              {
+                key: 'shorts',
+                items: displayShorts,
+                render: (items: typeof displayShorts) =>
+                  items.length > 0 ? (
+                    <CategorySection key="shorts" id="shorts" title="Shorts" icon={<Zap size={18} color="white" />} count={items.length}>
+                      {items.map((v) => <VideoCard key={v.id} video={v as VideoType} />)}
+                    </CategorySection>
+                  ) : null,
+              },
+              {
+                key: 'creators',
+                items: displayCreators,
+                render: (items: typeof displayCreators) =>
+                  items.length > 0 ? (
+                    <CategorySection key="creators" id="creators" title="Creators" icon={<Users size={18} color="white" />} count={items.length} twoColumn>
+                      {items.map((c) => <CreatorCard key={c.id} channel={c as Channel} />)}
+                    </CategorySection>
+                  ) : null,
+              },
+            ]
+              .filter((section) => section.items.length > 0)
+              .map((section) => section.render(section.items as never))}
           </div>
         </div>
       </div>

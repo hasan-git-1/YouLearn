@@ -309,7 +309,108 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ─── Focus ring ─────────────────────────────────────────────────────────── */
 
+
+/* ─── Focus ring ─────────────────────────────────────────────────────────── */
+
 :focus-visible {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
+}
+
+/* ─── Topic card ──────────────────────────────────────────────────────────── */
+
+/**
+ * Fixed-height card for the Popular Topics grid.
+ * All cards are the same height regardless of topic name length.
+ * Text overflow is managed via line-clamp on the children.
+ * Hover: 150ms lift + shadow — NOT a jarring scale transform.
+ */
+.topic-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-radius: 16px;
+  /* Fixed min-height so all cards in a row are the same height */
+  min-height: 160px;
+  background: linear-gradient(145deg, rgba(20, 24, 45, 0.85) 0%, rgba(12, 15, 30, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  /* Hover transition: subtle lift (150ms) — spec says 150-200ms */
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topic-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Hover border glow overlay */
+.topic-card__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.12);
+  transition: opacity 0.15s ease;
+}
+
+.topic-card:hover .topic-card__glow {
+  opacity: 1;
+}
+
+/* ─── How-step card equal height ────────────────────────────────────────────── */
+
+/* glass-card already has the right base — the grid's align-items:stretch
+   handles equal height automatically. No extra rules needed here. */
+
+/* ─── Responsive grid utilities ────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+  .sm\:grid-cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .sm\:grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ─── prefers-reduced-motion ───────────────────────────────────────────────────── */
+
+/**
+ * Disable ALL animations and transitions for users who've set reduced-motion
+ * at the OS level. This is a site-wide blanket rule per spec Issue 2.
+ * The ScrollReveal component also handles this in JS for its own animations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Ensure search bar is immediately visible — not hidden behind animation */
+  .animate-fade-up,
+  .animate-fade-up-delay-1,
+  .animate-fade-up-delay-2,
+  .animate-fade-up-delay-3 {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

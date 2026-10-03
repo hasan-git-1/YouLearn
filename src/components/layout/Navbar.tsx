@@ -1,19 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { Search, BookOpen, Bookmark, User as UserIcon, LogOut, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export function Navbar() {
+function NavbarSearchInput() {
   const router = useRouter();
-  const pathname = usePathname();
-  const { user, openAuthModal, signOut } = useAuth();
-  const [query, setQuery] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const isHomePage = pathname === '/';
+  const searchParams = useSearchParams();
+  const urlQuery = searchParams.get('q') ?? '';
+  const [query, setQuery] = useState(urlQuery);
+  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
+
+  if (urlQuery !== prevUrlQuery) {
+    setPrevUrlQuery(urlQuery);
+    setQuery(urlQuery);
+  }
 
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
@@ -25,6 +28,37 @@ export function Navbar() {
     },
     [query, router]
   );
+
+  return (
+    <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-2">
+      <div className="relative flex items-center">
+        <Search
+          size={15}
+          className="absolute left-3.5 pointer-events-none"
+          style={{ color: 'var(--text-muted)' }}
+        />
+        <input
+          id="navbar-search"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="What do you want to learn?"
+          className="input-base pl-10 pr-4 py-2 text-sm w-full"
+          style={{ borderRadius: 'var(--radius-md)' }}
+          autoComplete="off"
+        />
+      </div>
+    </form>
+  );
+}
+
+export function Navbar() {
+  const pathname = usePathname();
+  const { user, openAuthModal, signOut } = useAuth();
+  const isHomePage = pathname === '/';
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -83,27 +117,11 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Search bar — hidden on homepage to keep single big hero search bar */}
+        {/* Search bar — hidden on homepage (hero search bar serves that role) */}
         {!isHomePage ? (
-          <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-2">
-            <div className="relative flex items-center">
-              <Search
-                size={15}
-                className="absolute left-3.5 pointer-events-none"
-                style={{ color: 'var(--text-muted)' }}
-              />
-              <input
-                id="navbar-search"
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search courses, videos, topics…"
-                className="input-base pl-10 pr-4 py-2 text-sm w-full"
-                style={{ borderRadius: 'var(--radius-md)' }}
-                autoComplete="off"
-              />
-            </div>
-          </form>
+          <Suspense fallback={<div className="flex-1 max-w-xl mx-2" />}>
+            <NavbarSearchInput />
+          </Suspense>
         ) : (
           <div className="flex-1" />
         )}

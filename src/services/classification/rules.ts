@@ -23,22 +23,51 @@ import { parseDurationToSeconds } from '@/services/youtube/client';
 const PODCAST_CHANNEL_PATTERNS = [
   /podcast/i,
   /show/i,
-  /talk/i,
+  /\btalk\b/i,
   /interview/i,
   /conversation/i,
-  /episode/i,
+  /\bepisode\b/i,
 ];
 
+/**
+ * Title patterns that strongly indicate podcast/interview FORMAT (conversational).
+ * These must be SPECIFIC — not words that also appear in tutorial titles.
+ * "episode" alone is not enough because tutorials use it too.
+ */
 const PODCAST_TITLE_PATTERNS = [
-  /podcast/i,
-  /interview/i,
+  /\bpodcast\b/i,
+  /\binterview\b/i,
   /conversation with/i,
-  /episode \d+/i,
-  /ep\.\s?\d+/i,
-  /ep\d+/i,
-  /\| ep /i,
-  /we talk/i,
+  /ep\.\s?\d+\b/i,           // "Ep. 12" — specific abbreviation form
+  /\|\s*ep\s+\d+/i,          // "| Ep 12"
+  /we talk(?:ed)? (?:with|to|about)/i,
   /on the show/i,
+  /\bguest\b.{0,30}\bepisode\b/i,
+  /\bepisode\s+\d+\b.*(?:with|feat|ft)/i, // episode N with/feat someone
+];
+
+/**
+ * Anti-patterns: if ANY of these match the title, it's NOT a podcast regardless
+ * of duration. This prevents long tutorials from being mis-classified.
+ * Duration is NOT the deciding factor — format (conversational) is.
+ */
+const TUTORIAL_ANTI_PATTERNS = [
+  /\btutorial\b/i,
+  /\bcourse\b/i,
+  /\blearn\b/i,
+  /\bbeginners?\b/i,
+  /\bbootcamp\b/i,
+  /\bfull\s+(?:stack|course|guide|series|project|build)\b/i,
+  /\bfrom\s+scratch\b/i,
+  /\bstep[- ]by[- ]step\b/i,
+  /\bcomplete\s+guide\b/i,
+  /\bcomplete\s+course\b/i,
+  /\bmaster(?:class|y)\b/i,
+  /\bcrash\s+course\b/i,
+  /\bexplained\b/i,
+  /\bhow\s+to\b/i,
+  /\bprogramming\b.*(?:tutorial|course|series)\b/i,
+  /\d+\s*hours?\s+(?:full|complete|course|of)/i, // "9 Hours Full Python Course"
 ];
 
 // ─── Course / sequential playlist patterns ────────────────────────────────────
@@ -132,26 +161,39 @@ export function classifyVideo(
   }
 
   // ── Rule 2: Podcast/Interview ─────────────────────────────────────────────
-  const isPodcastTitle = PODCAST_TITLE_PATTERNS.some((p) => p.test(title));
-  const isPodcastChannel = PODCAST_CHANNEL_PATTERNS.some((p) =>
-    p.test(channelTitle)
-  );
-  const isPodcastDescription =
-    /podcast|episode|host|guest|interview/i.test(description);
+  // IMPORTANT: Duration is NOT the deciding factor — format (conversational
+  // vs. instructional) is. A 9-hour Python course is never a podcast.
+  // We require STRONG format signals AND no tutorial anti-patterns.
+  const isTutorialContent = TUTORIAL_ANTI_PATTERNS.some((p) => p.test(title));
 
-  if (
-    (durationSec === null || durationSec > 20 * 60) && // > 20 minutes
-    (isPodcastTitle ||
-      (isPodcastChannel && isPodcastDescription) ||
-      (isPodcastTitle && isPodcastDescription))
-  ) {
-    return {
-      contentType: 'podcast',
-      confidence: isPodcastTitle && isPodcastChannel ? 0.9 : 0.7,
-      isCourse: false,
-      courseConfidence: 0,
-      difficulty: inferDifficulty(title, description),
-    };
+  if (!isTutorialContent) {
+    const isPodcastTitle = PODCAST_TITLE_PATTERNS.some((p) => p.test(title));
+    const isPodcastChannel = PODCAST_CHANNEL_PATTERNS.some((p) =>
+      p.test(channelTitle)
+    );
+    const isPodcastDescription =
+      /\bpodcast\b|\bepisode\b.*\bguest\b|\bhost(?:ed by)\b|\binterview(?:ed by|ing)\b/i.test(description);
+
+    // Require: long-form (>30 min) AND at least 2 independent format signals
+    // (title + channel) OR (title + description) — NOT title alone.
+    // This prevents tutorials titled "Episode 1: Intro to Python" from matching.
+    const formatSignalCount =
+      (isPodcastTitle ? 1 : 0) +
+      (isPodcastChannel ? 1 : 0) +
+      (isPodcastDescription ? 1 : 0);
+
+    if (
+      (durationSec === null || durationSec > 30 * 60) && // > 30 minutes
+      formatSignalCount >= 2 // require at least 2 signals, not just title alone
+    ) {
+      return {
+        contentType: 'podcast',
+        confidence: formatSignalCount === 3 ? 0.9 : 0.75,
+        isCourse: false,
+        courseConfidence: 0,
+        difficulty: inferDifficulty(title, description),
+      };
+    }
   }
 
   // ── Rule 3: Part of a course playlist ────────────────────────────────────
