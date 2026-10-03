@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Sparkles, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { InitialUniverseLoader } from './InitialUniverseLoader';
 import { KnowledgeUniverseCanvas } from './KnowledgeUniverseCanvas';
 import { HeroHeadline } from './HeroHeadline';
 import { CommandSearch } from './CommandSearch';
@@ -19,80 +18,59 @@ interface HomeClientProps {
 }
 
 export function HomeClient({ allTopics }: HomeClientProps) {
-  const [activeQuery, setActiveQuery] = useState<string>('');
-
   return (
-    <div className="relative min-h-screen bg-[#06080f] text-white overflow-hidden">
-      {/* ── Initial Micro-Loading Sequence ──────────────────────────────── */}
-      <InitialUniverseLoader />
+    <div className="relative min-h-screen bg-[#05070e] text-white overflow-hidden">
+      {/* ── Fixed Atmospheric Background Canvas ────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="fixed inset-0 z-0 pointer-events-none"
+      >
+        <KnowledgeUniverseCanvas />
+      </motion.div>
 
-      {/* ── Fixed/Ambient Knowledge Universe Canvas Background ──────────── */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <KnowledgeUniverseCanvas activeQuery={activeQuery} />
-      </div>
-
-      {/* ── Fullscreen Immersive Hero Experience ────────────────────────── */}
-      <section className="relative z-10 flex flex-col items-center justify-center min-h-[94vh] px-4 pt-16 pb-24 text-center">
-        {/* Subtle Ambient hero lighting */}
+      {/* ── Fullscreen Main Hero Experience ────────────────────────────── */}
+      <section className="relative z-10 flex flex-col items-center justify-center min-h-[92vh] px-4 pt-10 pb-24 text-center">
+        {/* Soft blue-violet atmospheric glow */}
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[550px] pointer-events-none rounded-full blur-[140px] opacity-15"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[500px] pointer-events-none rounded-full blur-[140px] opacity-15"
           style={{
-            background: 'radial-gradient(circle, #6366f1 0%, #06b6d4 40%, transparent 70%)',
+            background: 'radial-gradient(circle, #6366f1 0%, #06b6d4 35%, transparent 70%)',
           }}
           aria-hidden="true"
         />
 
-        {/* ── 3-4 Subtle Peripheral Topic Signals (Node.js, ML, Full Stack, Data Science) ── */}
+        {/* Exactly 3 Subtle Peripheral Signals (Node.js, Machine Learning, Data Science) */}
         <FloatingTopicSignals />
 
-        {/* ── 4 Major Floating Content Cards ──────────────────────────────── */}
+        {/* Exactly 4 Floating Content Cards */}
         <div className="absolute inset-0 max-w-7xl mx-auto pointer-events-none">
           <FloatingEcosystemCards />
         </div>
 
-        {/* ── Central Hero Column (Clean Negative Space & Razor Focus) ────── */}
-        <div className="relative z-20 max-w-3xl mx-auto flex flex-col items-center">
-          {/* Animated Compact Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-500/30 bg-[#0c1024]/80 backdrop-blur-md text-indigo-300 text-[11px] font-mono tracking-wider mb-6 shadow-[0_0_20px_rgba(99,102,241,0.2)]"
-          >
-            <Sparkles size={11} className="text-cyan-400" />
-            <span>AI-GUIDED · QUOTA-SAFE · REAL CONTENT</span>
-          </motion.div>
-
-          {/* Enormous Editorial Headline */}
+        {/* Central Hero Column (Uncompromised negative space & razor focus) */}
+        <div className="relative z-20 max-w-3xl mx-auto flex flex-col items-center w-full">
+          {/* Badge, Editorial Headline & Subtitle */}
           <HeroHeadline />
 
-          {/* Subheadline with Technical Clarity (matching mockup copy) */}
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
-            className="mt-6 mb-8 text-gray-300 text-sm sm:text-base max-w-xl leading-relaxed"
-          >
-            Discover courses, videos, podcasts &amp; top creators for any topic — AI-organized, never fabricated, sourced from real indexed content.
-          </motion.p>
-
-          {/* Command-Center Search Interface */}
+          {/* Command Search & Single Row of 6 Topic Chips */}
           <div className="w-full">
-            <CommandSearch onQueryChange={setActiveQuery} />
+            <CommandSearch />
           </div>
         </div>
 
-        {/* ── Celestial Horizon Scroll Indicator ──────────────────────────── */}
+        {/* Subtle Celestial Scroll Indicator */}
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.75 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
+          animate={{ opacity: 0.65 }}
+          transition={{ delay: 1.3, duration: 0.7 }}
           className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-[10px] font-mono tracking-widest uppercase text-gray-400 pointer-events-none z-20"
         >
-          <div className="w-4 h-6 rounded-full border border-gray-500 flex items-start justify-center p-1">
+          <div className="w-4 h-6 rounded-full border border-gray-600/60 flex items-start justify-center p-1">
             <motion.div
-              animate={{ y: [0, 6, 0] }}
-              transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+              animate={{ y: [0, 5, 0] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
               className="w-1 h-1.5 rounded-full bg-indigo-400"
             />
           </div>
@@ -108,7 +86,7 @@ export function HomeClient({ allTopics }: HomeClientProps) {
         <InteractiveProductSimulation />
       </div>
 
-      {/* ── Discovery Section: Asymmetric Bento Grid ─────────────────────── */}
+      {/* ── Discovery Section: Bento Grid ────────────────────────────────── */}
       <div className="relative z-10">
         <DiscoveryBento topicsList={allTopics} />
       </div>
