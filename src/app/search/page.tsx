@@ -5,7 +5,7 @@ import { SearchResults } from '@/features/search/SearchResults';
 export const dynamic = 'force-dynamic';
 
 interface SearchPageProps {
-  searchParams: Promise<{ q?: string; limit?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
@@ -28,7 +28,7 @@ export default function SearchPage(props: SearchPageProps) {
 }
 
 async function SearchPageContent({ searchParams }: SearchPageProps) {
-  const { q, limit } = await searchParams;
+  const { q } = await searchParams;
   const query = q?.trim() ?? '';
 
   return (
@@ -37,7 +37,7 @@ async function SearchPageContent({ searchParams }: SearchPageProps) {
       <div className="px-4 py-8" style={{ maxWidth: 1280, margin: '0 auto' }}>
         {query ? (
           <Suspense fallback={<SearchResultsSkeleton />}>
-            <SearchResults query={query} limit={parseInt(limit ?? '12', 10)} />
+            <SearchResults query={query} />
           </Suspense>
         ) : (
           <EmptyQueryState />

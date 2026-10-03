@@ -30,6 +30,113 @@ function getGeminiClient(): GoogleGenAI | null {
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 
+export interface RelevanceCandidate {
+  id: string;
+  title: string;
+  description: string | null;
+  channelName: string | null;
+}
+
+export interface RelevanceVerdict {
+  isRelevant: boolean;
+  relevanceScore: number;
+  reason: string;
+}
+
+/**
+ * Strict topical gate for ingestion candidates. Results are processed in small
+ * batches to keep request payloads bounded. Any unavailable, malformed, or
+ * missing verdict fails closed so unverified content cannot enter the index.
+ */
+export async function filterTopicallyRelevant(
+  query: string,
+  candidates: RelevanceCandidate[]
+): Promise<Map<string, RelevanceVerdict>> {
+  const rejected = new Map<string, RelevanceVerdict>(
+    candidates.map((candidate) => [candidate.id, {
+      isRelevant: false,
+      relevanceScore: 0,
+      reason: 'No verified relevance verdict',
+    }])
+  );
+  const ai = getGeminiClient();
+  if (!ai || candidates.length === 0) return rejected;
+
+  const schema: Schema = {
+    type: Type.ARRAY,
+    items: {
+      type: Type.OBJECT,
+      properties: {
+        item_id: { type: Type.STRING },
+        is_relevant: { type: Type.BOOLEAN },
+        relevance_score: { type: Type.NUMBER },
+        reason: { type: Type.STRING },
+      },
+      required: ['item_id', 'is_relevant', 'relevance_score', 'reason'],
+    },
+  };
+
+  for (let start = 0; start < candidates.length; start += 20) {
+    const batch = candidates.slice(start, start + 20);
+    const candidateText = batch.map((candidate) =>
+      `ID: ${candidate.id}\nTitle: ${candidate.title}\nDescription: ${candidate.description ?? 'N/A'}\nChannel: ${candidate.channelName ?? 'N/A'}`
+    ).join('\n\n---\n\n');
+
+    try {
+      const response = await ai.models.generateContent({
+        model: DEFAULT_MODEL,
+        contents: `You are filtering search results for topical relevance only.
+The user searched: "${query}"
+
+For each item, decide if it is SUBSTANTIVELY about this exact topic.
+Do NOT mark something relevant because:
+- it is popular or from a well-known creator
+- it is loosely related or adjacent
+- it shares a generic category without being specifically about the searched topic
+
+Mark is_relevant false for anything off-topic, even if YouTube returned it. Be strict, not generous.
+Return one JSON object for every provided ID.\n\n${candidateText}`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0,
+        },
+      });
+
+      if (!response.text) continue;
+      const parsed = JSON.parse(response.text) as Array<{
+        item_id?: unknown;
+        is_relevant?: unknown;
+        relevance_score?: unknown;
+        reason?: unknown;
+      }>;
+      if (!Array.isArray(parsed)) continue;
+
+      const batchIds = new Set(batch.map((candidate) => candidate.id));
+      for (const item of parsed) {
+        if (typeof item.item_id !== 'string' || !batchIds.has(item.item_id)) continue;
+        if (
+          typeof item.is_relevant !== 'boolean' ||
+          typeof item.relevance_score !== 'number' ||
+          !Number.isFinite(item.relevance_score) ||
+          typeof item.reason !== 'string'
+        ) continue;
+
+        const score = Math.max(0, Math.min(1, item.relevance_score));
+        rejected.set(item.item_id, {
+          isRelevant: item.is_relevant && score >= 0.5,
+          relevanceScore: score,
+          reason: item.reason.slice(0, 240),
+        });
+      }
+    } catch (error) {
+      console.error('[AI] filterTopicallyRelevant error:', error);
+    }
+  }
+
+  return rejected;
+}
+
 /**
  * 7.1 — Generate a structured topic overview grounded in indexed content.
  */

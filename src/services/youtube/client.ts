@@ -242,6 +242,7 @@ export async function getPlaylistDetails(
       results.push({
         id: item.id ?? '',
         title: item.snippet?.title ?? '',
+        description: item.snippet?.description ?? '',
         channelId: item.snippet?.channelId ?? '',
         itemCount: item.contentDetails?.itemCount ?? 0,
       });
@@ -455,6 +456,7 @@ export async function fastGetPlaylistDetails(
         results.push({
           id: item.id ?? '',
           title: item.snippet?.title ?? '',
+          description: item.snippet?.description ?? '',
           channelId: item.snippet?.channelId ?? '',
           itemCount: item.contentDetails?.itemCount ?? 0,
         });

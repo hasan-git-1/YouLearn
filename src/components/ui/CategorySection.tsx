@@ -2,7 +2,7 @@
 
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ReactNode } from 'react';
+import { Children, type ReactNode, useState } from 'react';
 
 interface CategorySectionProps {
   id: string;
@@ -11,6 +11,8 @@ interface CategorySectionProps {
   count: number;
   children: ReactNode;
   className?: string;
+  /** Number of pre-fetched cards visible before the client-side expansion. */
+  defaultVisible?: number;
   /** If true, renders children in a 2-column layout (for creator cards) */
   twoColumn?: boolean;
 }
@@ -23,7 +25,10 @@ export function CategorySection({
   children,
   className,
   twoColumn = false,
+  defaultVisible = 5,
 }: CategorySectionProps) {
+  const [expanded, setExpanded] = useState(false);
+  const cards = Children.toArray(children);
   if (count === 0) return null;
 
   return (
@@ -54,12 +59,13 @@ export function CategorySection({
           </div>
         </div>
 
-        {count > 6 && (
+        {count > defaultVisible && (
           <button
             className="btn-ghost py-1.5 px-3 text-xs flex items-center gap-1"
             type="button"
+            onClick={() => setExpanded((value) => !value)}
           >
-            See all <ChevronRight size={13} />
+            {expanded ? 'Show less' : 'View more'} <ChevronRight size={13} className={expanded ? 'rotate-90' : ''} />
           </button>
         )}
       </div>
@@ -73,7 +79,9 @@ export function CategorySection({
             : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
         )}
       >
-        {children}
+        {cards.map((child, index) => (
+          <div key={index} className={!expanded && index >= defaultVisible ? 'hidden' : undefined}>{child}</div>
+        ))}
       </div>
     </section>
   );

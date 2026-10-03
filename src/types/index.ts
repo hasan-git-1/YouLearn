@@ -223,6 +223,7 @@ export interface RawYouTubeChannel {
 export interface RawYouTubePlaylist {
   id: string;
   title: string;
+  description: string;
   channelId: string;
   itemCount: number;
 }

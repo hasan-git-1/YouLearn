@@ -115,8 +115,7 @@ export async function fastSearch(
 
     // ── Step 4: Get unique channel IDs and fetch channel details ─────────────
     const channelIds = [...new Set(rawVideos.map((v) => v.channelId).filter(Boolean))];
-    const rawChannels = await fastGetChannelDetails(channelIds);
-    const channelMap = new Map(rawChannels.map((c) => [c.id, c]));
+    let rawChannels = await fastGetChannelDetails(channelIds);
 
     // ── Step 5: Search for playlists (courses) ───────────────────────────────
     const playlistSearchResults = await fastSearchContent({
@@ -134,6 +133,13 @@ export async function fastSearch(
     if (playlistIds.length > 0) {
       rawPlaylistsAll = await fastGetPlaylistDetails(playlistIds);
     }
+
+    const playlistChannelIds = rawPlaylistsAll.map((playlist) => playlist.channelId).filter(Boolean);
+    const missingPlaylistChannelIds = playlistChannelIds.filter((channelId) => !channelIds.includes(channelId));
+    if (missingPlaylistChannelIds.length > 0) {
+      rawChannels = await fastGetChannelDetails([...channelIds, ...missingPlaylistChannelIds]);
+    }
+    const channelMap = new Map(rawChannels.map((channel) => [channel.id, channel]));
 
     // Relevance filter for playlists too
     let rawPlaylists: RawYouTubePlaylist[] = rawPlaylistsAll;

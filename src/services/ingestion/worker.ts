@@ -46,7 +46,7 @@ import {
   validateContentType,
   validateDifficulty,
 } from '@/services/classification/rules';
-import { classifyWithLLMFallback } from '@/services/ai';
+import { classifyWithLLMFallback, filterTopicallyRelevant } from '@/services/ai';
 import type {
   IngestionJobInput,
 } from '@/types';
@@ -59,7 +59,7 @@ function estimateQuotaCost(maxSearchCalls: number): number {
   // + videos.list: ~2 units (2 batches of 50)
   // + channels.list: ~1 unit
   // + playlistItems.list: ~5 units (5 playlists × 1 unit each)
-  return maxSearchCalls * 100 + 8;
+  return (maxSearchCalls + 1) * 100 + 8;
 }
 
 // ─── Main ingestion function ──────────────────────────────────────────────────
@@ -126,15 +126,13 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
 
     for (let i = 0; i < maxSearchCalls; i++) {
       // Vary the search slightly to get broader coverage
-      const searchQuery = i === 0
-        ? topic
-        : i === 1
-        ? `${topic} tutorial`
-        : i === 2
-        ? `${topic} course`
-        : i === 3
-        ? `${topic} beginner`
-        : `${topic} explained`;
+      const searchQuery = [
+        topic,
+        `${topic} course`,
+        `${topic} tutorial`,
+        `${topic} podcast interview`,
+        `${topic} for beginners`,
+      ][i] ?? `${topic} tutorial`;
 
       const results = await searchContent({
         query: searchQuery,
@@ -170,16 +168,51 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
     console.log(`[ingestion] Found ${videoIds.length} unique video IDs, ${playlistSearchIds.length} playlist IDs`);
 
     // ── Step 3: Fetch full video details ──────────────────────────────────
-    const rawVideos = await getVideoDetails(videoIds);
+    const fetchedVideos = await getVideoDetails(videoIds);
+
+    // Relevance is a hard gate, before classification or persistence. A
+    // candidate that Gemini cannot positively verify is deliberately excluded.
+    const videoRelevance = await filterTopicallyRelevant(
+      topic,
+      fetchedVideos.map((video) => ({
+        id: video.id,
+        title: video.title,
+        description: video.description || null,
+        channelName: video.channelTitle || null,
+      }))
+    );
+    const rawVideos = fetchedVideos.filter((video) =>
+      videoRelevance.get(video.id)?.isRelevant === true
+    );
+    console.log(`[ingestion] Relevance gate kept ${rawVideos.length}/${fetchedVideos.length} video candidates for "${topic}"`);
 
     // ── Step 4: Collect unique channel IDs ───────────────────────────────
     const channelIds = [...new Set(rawVideos.map((v) => v.channelId).filter(Boolean))];
 
     // ── Step 5: Fetch channel details ─────────────────────────────────────
-    const rawChannels = await getChannelDetails(channelIds);
+    let rawChannels = await getChannelDetails(channelIds);
 
     // ── Step 6: Fetch playlist details ────────────────────────────────────
-    const rawPlaylists = await getPlaylistDetails(playlistSearchIds);
+    const fetchedPlaylists = await getPlaylistDetails(playlistSearchIds);
+    const playlistChannelIds = fetchedPlaylists.map((playlist) => playlist.channelId).filter(Boolean);
+    const missingPlaylistChannelIds = playlistChannelIds.filter((channelId) => !channelIds.includes(channelId));
+    if (missingPlaylistChannelIds.length > 0) {
+      rawChannels = await getChannelDetails([...channelIds, ...missingPlaylistChannelIds]);
+    }
+    const channelNameByYoutubeId = new Map(rawChannels.map((channel) => [channel.id, channel.title]));
+    const playlistRelevance = await filterTopicallyRelevant(
+      topic,
+      fetchedPlaylists.map((playlist) => ({
+        id: playlist.id,
+        title: playlist.title,
+        description: playlist.description || null,
+        channelName: channelNameByYoutubeId.get(playlist.channelId) ?? null,
+      }))
+    );
+    const rawPlaylists = fetchedPlaylists.filter((playlist) =>
+      playlistRelevance.get(playlist.id)?.isRelevant === true
+    );
+    console.log(`[ingestion] Relevance gate kept ${rawPlaylists.length}/${fetchedPlaylists.length} playlist candidates for "${topic}"`);
 
     // ── Step 7: Upsert channels ───────────────────────────────────────────
     const channelIdMap = new Map<string, string>(); // youtubeChannelId → internal uuid
@@ -412,11 +445,19 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
     });
 
     if (topicRecord) {
-      for (const [, videoUUID] of videoIdMap) {
+      for (const [youtubeVideoId, videoUUID] of videoIdMap) {
+        const relevanceScore = videoRelevance.get(youtubeVideoId)?.relevanceScore ?? 0.5;
         await db
           .insert(videoTopics)
-          .values({ videoId: videoUUID, topicId: topicRecord.id, relevanceScore: 1.0 })
-          .onConflictDoNothing();
+          .values({
+            videoId: videoUUID,
+            topicId: topicRecord.id,
+            relevanceScore,
+          })
+          .onConflictDoUpdate({
+            target: [videoTopics.videoId, videoTopics.topicId],
+            set: { relevanceScore },
+          });
       }
     }
 

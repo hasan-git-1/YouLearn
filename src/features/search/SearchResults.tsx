@@ -60,10 +60,9 @@ const CATEGORY_META: Record<
 
 interface SearchResultsProps {
   query: string;
-  limit?: number;
 }
 
-export async function SearchResults({ query, limit = 15 }: SearchResultsProps) {
+export async function SearchResults({ query }: SearchResultsProps) {
   // Direct service call — no HTTP overhead
   // pool=50 gives each section up to 50 items; CategorySection shows 5 by default
   // and reveals the rest via "View More" without re-querying YouTube.

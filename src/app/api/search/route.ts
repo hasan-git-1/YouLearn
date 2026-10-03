@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
           name: 'app/topic.ingest',
           data: {
             topic: q,
-            maxSearchCalls: 2,
+            maxSearchCalls: 5,
             skipIfRecent: false,
           },
         });

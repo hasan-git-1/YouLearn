@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
 import { Users, Video } from 'lucide-react';
-import { cn, formatCount } from '@/lib/utils';
+import { cn, formatCount, getYouTubeChannelUrl } from '@/lib/utils';
 import type { Channel } from '@/types';
 
 interface CreatorCardProps {
@@ -14,6 +13,7 @@ interface CreatorCardProps {
 export function CreatorCard({ channel, className }: CreatorCardProps) {
   const subscribers = formatCount(channel.subscriberCount ?? undefined);
   const videoCount = formatCount(channel.videoCount ?? undefined);
+  const youtubeUrl = getYouTubeChannelUrl(channel.youtubeChannelId);
 
   // Initials fallback
   const initials = channel.name
@@ -23,10 +23,13 @@ export function CreatorCard({ channel, className }: CreatorCardProps) {
     .join('');
 
   return (
-    <Link
-      href={`/channels/${channel.id}`}
+    <a
+      href={youtubeUrl ?? undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-disabled={!youtubeUrl}
       className={cn('glass-card group flex items-center gap-4 p-4', className)}
-      style={{ textDecoration: 'none' }}
+      style={{ textDecoration: 'none', pointerEvents: youtubeUrl ? undefined : 'none', opacity: youtubeUrl ? undefined : 0.55 }}
     >
       {/* Avatar */}
       <div
@@ -99,7 +102,7 @@ export function CreatorCard({ channel, className }: CreatorCardProps) {
           <path d="M7 17L17 7M17 7H7M17 7v10" />
         </svg>
       </div>
-    </Link>
+    </a>
   );
 }
 
