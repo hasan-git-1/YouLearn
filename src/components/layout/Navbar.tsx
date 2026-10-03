@@ -57,8 +57,19 @@ export function Navbar() {
   const { user, openAuthModal, signOut } = useAuth();
   const isHomePage = pathname === '/';
 
+  const [scrolled, setScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Track scroll position on homepage to transform transparent nav to floating glass
+  useEffect(() => {
+    if (!isHomePage) return;
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 24);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isHomePage]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -73,15 +84,15 @@ export function Navbar() {
 
   const userInitial = user?.email ? user.email[0].toUpperCase() : 'U';
 
+  const isTransparent = isHomePage && !scrolled;
+
   return (
     <nav
-      className="sticky top-0 z-50"
-      style={{
-        background: 'rgba(8, 11, 20, 0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid var(--border-subtle)',
-      }}
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        isTransparent
+          ? 'bg-transparent border-b border-transparent'
+          : 'bg-[#080b14]/90 backdrop-blur-xl border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]'
+      }`}
     >
       <div
         className="mx-auto flex items-center justify-between gap-4 px-4 py-3"
@@ -90,11 +101,11 @@ export function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 flex-shrink-0"
+          className="flex items-center gap-2.5 flex-shrink-0 group"
           style={{ textDecoration: 'none' }}
         >
           <div
-            className="flex items-center justify-center rounded-xl"
+            className="flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
             style={{
               width: 34,
               height: 34,
@@ -117,7 +128,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Search bar — hidden on homepage (hero search bar serves that role) */}
+        {/* Search bar — hidden on homepage (hero command search serves that role) */}
         {!isHomePage ? (
           <Suspense fallback={<div className="flex-1 max-w-xl mx-2" />}>
             <NavbarSearchInput />
@@ -126,11 +137,19 @@ export function Navbar() {
           <div className="flex-1" />
         )}
 
-        {/* Right Nav / User Controls */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
+        {/* Center / Right Nav / User Controls */}
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <Link
+            href="/topics"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+            style={{ textDecoration: 'none' }}
+          >
+            <span>Explore Topics</span>
+          </Link>
+
           <Link
             href="/library"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all"
             style={{ textDecoration: 'none' }}
           >
             <Bookmark size={14} className="text-indigo-400" />
