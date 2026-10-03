@@ -10,6 +10,7 @@
 
 import { Inngest } from 'inngest';
 import { ingestTopic } from '@/services/ingestion/worker';
+import { SEED_TOPICS } from '@/services/ingestion/seed-topics';
 
 // ─── Inngest client ───────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ export const ingestTopicJob = inngest.createFunction(
     retries: 2,
   },
   async ({ event, step }) => {
-    const { topic, maxSearchCalls = 5, skipIfRecent = false } = event.data;
+    const { topic, maxSearchCalls = 6, skipIfRecent = false } = event.data;
 
     const result = await step.run('ingest-topic-from-youtube', async () => {
       return ingestTopic({ topic, maxSearchCalls, skipIfRecent });
@@ -45,17 +46,6 @@ export const ingestTopicJob = inngest.createFunction(
 );
 
 // ─── Weekly resync cron ──────────────────────────────────────────────────────
-
-const SEED_TOPICS = [
-  'Full Stack Web Development', 'AI Engineering', 'Data Science',
-  'Machine Learning', 'Python Programming', 'JavaScript TypeScript',
-  'System Design', 'DevOps Cloud Engineering', 'Cybersecurity',
-  'Digital Marketing', 'Product Management', 'UX Design',
-  'Stock Market Basics', 'Personal Finance', 'Entrepreneurship',
-  'UPSC Preparation', 'Physics JEE NEET', 'Mathematics',
-  'English Communication', 'Graphic Design', 'Video Editing',
-  'React Development', 'Next.js', 'Node.js', 'Database Engineering',
-];
 
 export const weeklyResyncJob = inngest.createFunction(
   {
@@ -69,7 +59,7 @@ export const weeklyResyncJob = inngest.createFunction(
       'trigger-topic-resync',
       SEED_TOPICS.map((topic) => ({
         name: 'app/topic.ingest' as const,
-        data: { topic, maxSearchCalls: 3, skipIfRecent: true },
+        data: { topic: topic.name, maxSearchCalls: 6, skipIfRecent: false },
       }))
     );
 

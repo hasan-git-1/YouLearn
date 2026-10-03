@@ -46,7 +46,12 @@ import {
   validateContentType,
   validateDifficulty,
 } from '@/services/classification/rules';
-import { classifyWithLLMFallback, filterTopicallyRelevant } from '@/services/ai';
+import {
+  classifyWithLLMFallback,
+  filterTopicallyRelevant,
+  generateDocumentEmbeddings,
+} from '@/services/ai';
+import { SEED_SEARCH_VARIANTS } from './seed-topics';
 import type {
   IngestionJobInput,
 } from '@/types';
@@ -71,7 +76,7 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
   playlistsIngested: number;
   unitsSpent: number;
 }> {
-  const { topic, maxSearchCalls = 5, skipIfRecent = false } = input;
+  const { topic, maxSearchCalls = 6, skipIfRecent = false } = input;
 
   // ── Create ingestion job record ───────────────────────────────────────────
   const [job] = await db
@@ -126,13 +131,7 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
 
     for (let i = 0; i < maxSearchCalls; i++) {
       // Vary the search slightly to get broader coverage
-      const searchQuery = [
-        topic,
-        `${topic} course`,
-        `${topic} tutorial`,
-        `${topic} podcast interview`,
-        `${topic} for beginners`,
-      ][i] ?? `${topic} tutorial`;
+      const searchQuery = SEED_SEARCH_VARIANTS(topic)[i] ?? `${topic} tutorial`;
 
       const results = await searchContent({
         query: searchQuery,
@@ -183,6 +182,13 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
     );
     const rawVideos = fetchedVideos.filter((video) =>
       videoRelevance.get(video.id)?.isRelevant === true
+    );
+    const videoEmbeddings = await generateDocumentEmbeddings(
+      rawVideos.map((video) => ({
+        id: video.id,
+        title: video.title,
+        description: video.description || null,
+      }))
     );
     console.log(`[ingestion] Relevance gate kept ${rawVideos.length}/${fetchedVideos.length} video candidates for "${topic}"`);
 
@@ -403,6 +409,15 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
 
         videoIdMap.set(rawVideo.id, inserted.id);
         videosIngested++;
+      }
+
+      const embedding = videoEmbeddings.get(rawVideo.id);
+      const videoUUID = videoIdMap.get(rawVideo.id);
+      if (embedding && videoUUID) {
+        await query(
+          'UPDATE videos SET embedding = $1::vector WHERE id = $2',
+          [`[${embedding.join(',')}]`, videoUUID]
+        );
       }
     }
 

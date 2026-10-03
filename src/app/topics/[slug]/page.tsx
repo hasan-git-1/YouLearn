@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { GraduationCap, Video, Mic, Zap, Users, Hash, Wifi } from 'lucide-react';
+import { GraduationCap, Video, Mic, Zap, Users, Hash } from 'lucide-react';
 import { db } from '@/db';
 import { topics } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { keywordSearch } from '@/services/search/keyword';
-import { fastSearch } from '@/services/search/fast';
 import { classifyIntent } from '@/services/search/intent';
 import { generateTopicOverview, generateLearningPath } from '@/services/ai';
+import { getSeedTopicBySlug } from '@/services/ingestion/seed-topics';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
 import { AILearningPathView } from '@/components/ui/AILearningPathView';
@@ -16,22 +16,6 @@ import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
 import type { Video as VideoType, Playlist, Channel } from '@/types';
-
-// Live results indicator for fast search
-function LiveResultsIndicator({ query }: { query: string }) {
-  return (
-    <div className="mb-8 animate-fade-up flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-      <Wifi size={16} className="text-emerald-400 animate-pulse" />
-      <span>Showing live YouTube results for <strong style={{ color: 'var(--text-primary)' }}>&ldquo;{query}&rdquo;</strong></span>
-      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-        Live
-      </span>
-      <p className="text-xs max-w-md text-center" style={{ color: 'var(--text-muted)' }}>
-        These are real-time results from YouTube. Full indexing with AI summaries takes ~3-5 minutes.
-      </p>
-    </div>
-  );
-}
 
 // Skeleton fallback for Suspense
 function TopicPageSkeleton() {
@@ -110,16 +94,22 @@ export default async function TopicPage({ params }: TopicPageProps) {
 }
 
 async function TopicPageContent({ topic }: { topic: { name: string; slug: string; description: string | null } }) {
-
-  const searchData = await keywordSearch({ q: topic.name, limit: 12 });
+  const seededTopic = getSeedTopicBySlug(topic.slug);
+  const searchData = await keywordSearch({
+    q: topic.name,
+    pool: seededTopic ? 15 : 50,
+    topicSlug: seededTopic?.slug,
+  });
   const { categoryOrder } = classifyIntent(topic.name);
   const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
 
-  // Cold start: no results in DB yet — use fast direct YouTube search
+  // Seeded routes must remain database-only. Non-seeded topics retain the
+  // existing live fallback while their background ingestion is in progress.
   let isLiveResults = false;
   let liveSearchData: typeof searchData | null = null;
 
-  if (totalResults === 0) {
+  if (totalResults === 0 && !seededTopic) {
+    const { fastSearch } = await import('@/services/search/fast');
     // Fetch live results from YouTube API directly
     try {
       liveSearchData = await fastSearch({ q: topic.name, limit: 12 });
@@ -137,7 +127,7 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   let aiOverview = null;
   let aiLearningPath = null;
 
-  if (!isLiveResults && totalResults > 0) {
+  if (!isLiveResults && totalResults > 0 && !seededTopic) {
     const allContent = [
       ...courses.map((c) => ({
         id: c.id,
@@ -243,7 +233,6 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
 
       {/* Content */}
       <div className="px-4 py-10" style={{ maxWidth: 1280, margin: '0 auto' }}>
-        {isLiveResults && <LiveResultsIndicator query={topic.name} />}
         <div>
           {/* AI Topic Overview (only for DB results) */}
           {aiOverview && (

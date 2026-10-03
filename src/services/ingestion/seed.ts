@@ -1,7 +1,7 @@
 /**
  * Tubiq — Seed Script (Phase 1A)
  *
- * Runs the full ingestion pipeline for all 25 seed topics.
+ * Runs the full ingestion pipeline for the 24 launch seed topics.
  * Run OFFLINE before public launch:
  *
  *   npx tsx src/services/ingestion/seed.ts
@@ -10,7 +10,7 @@
  *
  *   npx tsx src/services/ingestion/seed.ts "Full Stack Web Development"
  *
- * Quota budget: 25 topics × ~600 units = ~15,000 units
+ * Quota budget: 24 topics × ~700 units = ~16,800 units
  * This will EXCEED a single day's quota (10,000 units).
  * The script automatically pauses when quota is low and resumes next day.
  *
@@ -21,39 +21,11 @@
  */
 
 import { loadEnvConfig } from '@next/env';
+import { SEED_TOPICS } from './seed-topics';
 
 loadEnvConfig(process.cwd());
 
-// All 25 seed topics (must match the slugs in 0001_initial.sql)
-const SEED_TOPICS = [
-  'Full Stack Web Development',
-  'AI Engineering',
-  'Data Science',
-  'Machine Learning',
-  'Python Programming',
-  'JavaScript TypeScript',
-  'System Design',
-  'DevOps Cloud Engineering',
-  'Cybersecurity',
-  'Digital Marketing',
-  'Product Management',
-  'UX Design',
-  'Stock Market Basics',
-  'Personal Finance',
-  'Entrepreneurship',
-  'UPSC Preparation',
-  'Physics JEE NEET',
-  'Mathematics',
-  'English Communication',
-  'Graphic Design',
-  'Video Editing',
-  'React Development',
-  'Next.js',
-  'Node.js',
-  'Database Engineering',
-];
-
-const UNITS_PER_TOPIC = 600; // conservative estimate
+const UNITS_PER_TOPIC = 708; // 6 video searches, playlist search, and detail calls
 const SAFE_REMAINING_UNITS = 1000; // always keep 1000 units in reserve
 const DELAY_BETWEEN_TOPICS_MS = 5000; // 5 seconds between jobs
 
@@ -74,7 +46,7 @@ async function main() {
     const topic = args.join(' ');
     console.log(`\n[seed] Ingesting single topic: "${topic}"`);
     try {
-      const result = await ingestTopic({ topic, maxSearchCalls: 5, skipIfRecent: true });
+      const result = await ingestTopic({ topic, maxSearchCalls: 6, skipIfRecent: true });
       console.log(`[seed] Done:`, result);
     } catch (error) {
       console.error(`[seed] Failed:`, error);
@@ -85,7 +57,7 @@ async function main() {
 
   // Batch mode
   const fastMode = args.includes('--fast');
-  const maxPerRun = fastMode ? 5 : 25;
+  const maxPerRun = fastMode ? 5 : SEED_TOPICS.length;
 
   console.log(`\n[seed] Starting batch ingestion for ${Math.min(SEED_TOPICS.length, maxPerRun)} topics`);
   console.log(`[seed] Fast mode: ${fastMode}`);
@@ -106,17 +78,17 @@ async function main() {
         `\n[seed] ⚠️  Quota low (${remaining} units remaining). Pausing.`
       );
       console.warn(`[seed] Ingested ${ingested} topics. Resume tomorrow with remaining topics.`);
-      console.warn(`[seed] Remaining topics: ${SEED_TOPICS.slice(i).join(', ')}`);
+      console.warn(`[seed] Remaining topics: ${SEED_TOPICS.slice(i).map((item) => item.name).join(', ')}`);
       break;
     }
 
-    console.log(`\n[seed] [${i + 1}/${SEED_TOPICS.length}] Ingesting: "${topic}"`);
+    console.log(`\n[seed] [${i + 1}/${SEED_TOPICS.length}] Ingesting: "${topic.name}"`);
     console.log(`[seed] Quota status: ${quotaState.unitsUsed}/${quotaState.dailyLimit} units used`);
 
     try {
       const result = await ingestTopic({
-        topic,
-        maxSearchCalls: 5,
+        topic: topic.name,
+        maxSearchCalls: 6,
         skipIfRecent: true,
       });
 

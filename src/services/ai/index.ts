@@ -44,6 +44,45 @@ export interface RelevanceVerdict {
 }
 
 /**
+ * Generates retrieval-document embeddings for content that has already passed
+ * the topical gate. Returning an empty map on an API failure keeps ingestion
+ * resumable; the next re-sync will retry missing embeddings.
+ */
+export async function generateDocumentEmbeddings(
+  candidates: Array<{ id: string; title: string; description: string | null }>
+): Promise<Map<string, number[]>> {
+  const embeddings = new Map<string, number[]>();
+  const ai = getGeminiClient();
+  if (!ai || candidates.length === 0) return embeddings;
+
+  for (let start = 0; start < candidates.length; start += 20) {
+    const batch = candidates.slice(start, start + 20);
+    try {
+      const response = await ai.models.embedContent({
+        model: 'gemini-embedding-001',
+        contents: batch.map((candidate) =>
+          `Title: ${candidate.title}\nDescription: ${candidate.description ?? ''}`
+        ),
+        config: {
+          taskType: 'RETRIEVAL_DOCUMENT',
+          outputDimensionality: 1536,
+        },
+      });
+
+      response.embeddings?.forEach((embedding, index) => {
+        if (embedding.values?.length === 1536) {
+          embeddings.set(batch[index].id, embedding.values);
+        }
+      });
+    } catch (error) {
+      console.error('[AI] generateDocumentEmbeddings error:', error);
+    }
+  }
+
+  return embeddings;
+}
+
+/**
  * Strict topical gate for ingestion candidates. Results are processed in small
  * batches to keep request payloads bounded. Any unavailable, malformed, or
  * missing verdict fails closed so unverified content cannot enter the index.

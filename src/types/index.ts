@@ -237,7 +237,7 @@ export interface RawYouTubePlaylistItem {
 
 export interface IngestionJobInput {
   topic: string;
-  /** Max search.list calls for this job (each = 100 units). Default 5. */
+  /** Max search.list calls for this job (each = 100 units). Default 6. */
   maxSearchCalls?: number;
   /** If true, skip if topic was ingested in last 7 days */
   skipIfRecent?: boolean;

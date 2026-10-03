@@ -16,6 +16,7 @@ import { CreatorCard } from '@/components/cards/CreatorCard';
 import { keywordSearch } from '@/services/search/keyword';
 import { classifyIntent } from '@/services/search/intent';
 import { generateTopicOverview } from '@/services/ai';
+import { resolveSeedTopic } from '@/services/ingestion/seed-topics';
 import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
 
 // Fire-and-forget ingestion trigger for cold-start — server-side
@@ -63,12 +64,19 @@ interface SearchResultsProps {
 }
 
 export async function SearchResults({ query }: SearchResultsProps) {
+  const seededTopic = resolveSeedTopic(query);
+  const databaseQuery = seededTopic?.name ?? query;
+
   // Direct service call — no HTTP overhead
   // pool=50 gives each section up to 50 items; CategorySection shows 5 by default
   // and reveals the rest via "View More" without re-querying YouTube.
   let searchData;
   try {
-    searchData = await keywordSearch({ q: query, pool: 50 });
+    searchData = await keywordSearch({
+      q: databaseQuery,
+      pool: seededTopic ? 15 : 50,
+      topicSlug: seededTopic?.slug,
+    });
   } catch (error) {
     console.error('[SearchResults] DB error:', error);
     return <DBErrorState />;
@@ -92,7 +100,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
 
   // Generate AI overview (only for DB results, not live)
   let aiOverview = null;
-  if (totalResults > 0) {
+  if (totalResults > 0 && !seededTopic) {
     try {
       const allContent = [
         ...courses.map((c) => ({ title: c.title, description: null, contentType: 'course' })),

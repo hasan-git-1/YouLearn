@@ -61,7 +61,7 @@ export async function keywordSearch(
   // `pool` is the number of items fetched per category for the UI to work with.
   // CategorySection will show the first 5 and reveal the rest via "View More".
   // Default is 50 to give a generous View More reserve.
-  const { q, pool = 50, limit } = options;
+  const { q, pool = 50, limit, topicSlug } = options;
   const fetchLimit = pool ?? limit ?? 50; // backcompat: if only `limit` provided, honour it
 
   // Sanitize query for tsvector — replace special chars, trim whitespace
@@ -103,13 +103,29 @@ export async function keywordSearch(
       ts_rank(v.search_vector, to_tsquery('english', ${tsQuery})) AS rank
     FROM videos v
     LEFT JOIN channels c ON c.id = v.channel_id
-    WHERE v.search_vector @@ to_tsquery('english', ${tsQuery})
-    ORDER BY rank DESC, v.view_count DESC NULLS LAST
+    WHERE (
+      ${topicSlug}::text IS NULL
+      AND v.search_vector @@ to_tsquery('english', ${tsQuery})
+    ) OR EXISTS (
+      SELECT 1
+      FROM video_topics vt
+      JOIN topics t ON t.id = vt.topic_id
+      WHERE vt.video_id = v.id AND t.slug = ${topicSlug}
+    )
+    ORDER BY
+      COALESCE((
+        SELECT MAX(vt.relevance_score)
+        FROM video_topics vt
+        JOIN topics t ON t.id = vt.topic_id
+        WHERE vt.video_id = v.id AND t.slug = ${topicSlug}
+      ), 0) DESC,
+      rank DESC,
+      v.view_count DESC NULLS LAST
     LIMIT ${Math.max(fetchLimit * 5, 250)}
   `);
 
   const allVideoRows = ((videoRows.rows ?? []) as Array<Record<string, unknown>>)
-    .filter((row) => matchesQueryStrictly(q, row.title as string, row.description as string | null));
+    .filter((row) => topicSlug || matchesQueryStrictly(q, row.title as string, row.description as string | null));
 
   // ── Separate by content_type ──────────────────────────────────────────────
   const videoResults = allVideoRows
@@ -150,15 +166,35 @@ export async function keywordSearch(
       ) AS rank
     FROM playlists p
     LEFT JOIN channels c ON c.id = p.channel_id
-    WHERE
-      p.is_course = true
-      AND setweight(to_tsvector('english', coalesce(p.title, '')), 'A') @@ to_tsquery('english', ${tsQuery})
-    ORDER BY rank DESC, p.video_count DESC NULLS LAST
+    WHERE p.is_course = true
+      AND (
+        (
+          ${topicSlug}::text IS NULL
+          AND setweight(to_tsvector('english', coalesce(p.title, '')), 'A') @@ to_tsquery('english', ${tsQuery})
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM playlist_items pi
+          JOIN video_topics vt ON vt.video_id = pi.video_id
+          JOIN topics t ON t.id = vt.topic_id
+          WHERE pi.playlist_id = p.id AND t.slug = ${topicSlug}
+        )
+      )
+    ORDER BY
+      COALESCE((
+        SELECT MAX(vt.relevance_score)
+        FROM playlist_items pi
+        JOIN video_topics vt ON vt.video_id = pi.video_id
+        JOIN topics t ON t.id = vt.topic_id
+        WHERE pi.playlist_id = p.id AND t.slug = ${topicSlug}
+      ), 0) DESC,
+      rank DESC,
+      p.video_count DESC NULLS LAST
     LIMIT ${Math.max(fetchLimit, 50)}
   `);
 
   const courseResults = ((courseRows.rows ?? []) as Array<Record<string, unknown>>)
-    .filter((row) => matchesQueryStrictly(q, row.title as string, null))
+    .filter((row) => topicSlug || matchesQueryStrictly(q, row.title as string, null))
     .slice(0, fetchLimit)
     .map(normalizeCourseRow);
 

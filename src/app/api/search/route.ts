@@ -24,6 +24,7 @@ import { db } from '@/db';
 import { searches } from '@/db/schema';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import type { SearchResponse } from '@/types';
+import { resolveSeedTopic } from '@/services/ingestion/seed-topics';
 
 const COLD_START_RATE_LIMIT = 3; // max cold-start triggers per user per day
 
@@ -44,7 +45,12 @@ export async function GET(request: NextRequest) {
     const intentResult = classifyIntent(q);
 
     // ── Step 2: Keyword search ───────────────────────────────────────────
-    const searchResult = await keywordSearch({ q, limit });
+    const seededTopic = resolveSeedTopic(q);
+    const searchResult = await keywordSearch({
+      q: seededTopic?.name ?? q,
+      limit: seededTopic ? 15 : limit,
+      topicSlug: seededTopic?.slug,
+    });
 
     // ── Step 3: Log search (fire-and-forget, non-blocking) ───────────────
     // We don't block the response on this
