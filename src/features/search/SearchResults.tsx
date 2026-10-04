@@ -74,7 +74,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
   try {
     searchData = await keywordSearch({
       q: databaseQuery,
-      pool: seededTopic ? 15 : 50,
+      pool: 50,
       topicSlug: seededTopic?.slug,
     });
   } catch (error) {

@@ -17,10 +17,9 @@ declare global {
 }
 
 function createPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error('DATABASE_URL environment variable is not set');
-  }
+  const connectionString =
+    process.env.DATABASE_URL ||
+    'postgresql://postgres:postgres@localhost:5432/postgres';
 
   return new Pool({
     connectionString,
@@ -28,7 +27,7 @@ function createPool(): Pool {
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
     ssl:
-      process.env.NODE_ENV === 'production'
+      process.env.NODE_ENV === 'production' && process.env.DATABASE_URL
         ? { rejectUnauthorized: false }
         : false,
   });

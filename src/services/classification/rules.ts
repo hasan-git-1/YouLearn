@@ -16,7 +16,7 @@ import type {
   RawYouTubeVideo,
   RawYouTubePlaylist,
 } from '@/types';
-import { parseDurationToSeconds } from '@/services/youtube/client';
+import { parseDurationToSeconds } from '@/lib/utils';
 
 // ─── Known podcast channel name patterns ─────────────────────────────────────
 

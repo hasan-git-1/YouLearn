@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
     const seededTopic = resolveSeedTopic(q);
     const searchResult = await keywordSearch({
       q: seededTopic?.name ?? q,
-      limit: seededTopic ? 15 : limit,
+      limit,
+      pool: limit,
       topicSlug: seededTopic?.slug,
     });
 

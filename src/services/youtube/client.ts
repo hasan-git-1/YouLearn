@@ -45,22 +45,7 @@ function getYouTubeClient(): youtube_v3.Youtube {
 
 // ─── ISO 8601 duration parser ─────────────────────────────────────────────────
 
-/**
- * Converts ISO 8601 duration (e.g. "PT1H23M45S") to total seconds.
- * Returns null if duration is missing or unparseable.
- */
-export function parseDurationToSeconds(iso: string | null | undefined): number | null {
-  if (!iso) return null;
-
-  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!match) return null;
-
-  const hours   = parseInt(match[1] ?? '0', 10);
-  const minutes = parseInt(match[2] ?? '0', 10);
-  const seconds = parseInt(match[3] ?? '0', 10);
-
-  return hours * 3600 + minutes * 60 + seconds;
-}
+export { parseDurationToSeconds } from '@/lib/utils';
 
 // ─── search.list — 100 units per call ────────────────────────────────────────
 

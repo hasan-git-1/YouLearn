@@ -28,6 +28,20 @@ export function formatDuration(seconds: number | null | undefined): string {
   return `${s}s`;
 }
 
+/** Parse ISO 8601 duration ("PT1H23M45S") to total seconds */
+export function parseDurationToSeconds(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return null;
+
+  const hours   = parseInt(match[1] ?? '0', 10);
+  const minutes = parseInt(match[2] ?? '0', 10);
+  const seconds = parseInt(match[3] ?? '0', 10);
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 /** Format date to relative string: "2 days ago", "3 months ago" */
 export function formatRelativeDate(date: Date | string | null | undefined): string {
   if (!date) return '';

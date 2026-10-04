@@ -97,7 +97,7 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   const seededTopic = getSeedTopicBySlug(topic.slug);
   const searchData = await keywordSearch({
     q: topic.name,
-    pool: seededTopic ? 15 : 50,
+    pool: 50,
     topicSlug: seededTopic?.slug,
   });
   const { categoryOrder } = classifyIntent(topic.name);

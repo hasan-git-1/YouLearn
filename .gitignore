@@ -37,6 +37,7 @@ yarn-error.log*
 /.agents/
 /.claude/
 /agent/
+/.kilo/
 
 # vercel
 .vercel
