@@ -15,7 +15,19 @@ import { AILearningPathView } from '@/components/ui/AILearningPathView';
 import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
-import type { Video as VideoType, Playlist, Channel } from '@/types';
+import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
+import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
+
+type TopicSearchData = SearchResultCategories & { totalResults: number };
+
+const emptySearchData = (): TopicSearchData => ({
+  courses: [],
+  videos: [],
+  podcasts: [],
+  shorts: [],
+  creators: [],
+  totalResults: 0,
+});
 
 // Skeleton fallback for Suspense
 function TopicPageSkeleton() {
@@ -34,6 +46,9 @@ function TopicPageSkeleton() {
         </div>
       </section>
       <div className="px-4 py-10" style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <p className="mb-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Finding and organizing content for this topic...
+        </p>
         <div className="space-y-14">
           {[1, 2, 3].map((i) => (
             <div key={i}>
@@ -70,7 +85,12 @@ interface TopicPageProps {
 
 export async function generateMetadata({ params }: TopicPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
+  let topic: { name: string; description: string | null } | undefined;
+  try {
+    topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
+  } catch (error) {
+    console.error('[TopicPage] Metadata topic lookup failed:', { slug, error });
+  }
   if (!topic) return { title: 'Topic Not Found — Tubiq' };
   return {
     title: `${topic.name} — Tubiq`,
@@ -81,7 +101,16 @@ export async function generateMetadata({ params }: TopicPageProps): Promise<Meta
 export default async function TopicPage({ params }: TopicPageProps) {
   const { slug } = await params;
 
-  const topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
+  let topic: { name: string; slug: string; description: string | null } | undefined;
+  try {
+    topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
+  } catch (error) {
+    // A transient database failure is not a missing topic. Avoid turning it
+    // into a misleading 404 while preserving the server-side diagnostic.
+    console.error('[TopicPage] Topic lookup failed:', { slug, error });
+    return <TopicUnavailable />;
+  }
+
   if (!topic) notFound();
 
   return (
@@ -95,33 +124,52 @@ export default async function TopicPage({ params }: TopicPageProps) {
 
 async function TopicPageContent({ topic }: { topic: { name: string; slug: string; description: string | null } }) {
   const seededTopic = getSeedTopicBySlug(topic.slug);
-  const searchData = await keywordSearch({
-    q: topic.name,
-    pool: 50,
-    topicSlug: seededTopic?.slug,
-  });
+  let searchData = emptySearchData();
+  try {
+    searchData = await keywordSearch({
+      q: topic.name,
+      pool: 50,
+      topicSlug: seededTopic?.slug,
+    });
+  } catch (error) {
+    // Search failures are expected operational failures, not an RSC crash.
+    // The live path below still gives the visitor a chance to see content.
+    console.error('[TopicPage] Seeded search failed:', { topic: topic.slug, error });
+  }
   const { categoryOrder } = classifyIntent(topic.name);
-  const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
+  const { courses, videos, podcasts, totalResults } = searchData;
 
-  // Seeded routes must remain database-only. Non-seeded topics retain the
-  // existing live fallback while their background ingestion is in progress.
   let isLiveResults = false;
-  let liveSearchData: typeof searchData | null = null;
+  let liveSearchData: TopicSearchData | null = null;
 
-  if (totalResults === 0 && !seededTopic) {
-    const { fastSearch } = await import('@/services/search/fast');
-    // Fetch live results from YouTube API directly
+  // Empty data is a cold start whether the topic is seeded or not. The live
+  // search uses the same multi-query, relevance-filtered pipeline as ingestion.
+  if (totalResults === 0) {
     try {
+      const { fastSearch } = await import('@/services/search/fast');
       liveSearchData = await fastSearch({ q: topic.name, limit: 12 });
-      isLiveResults = true;
+      isLiveResults = liveSearchData.totalResults > 0;
     } catch (e) {
-      console.error('[TopicPage] Fast search error:', e);
+      console.error('[TopicPage] Live fallback failed:', { topic: topic.slug, error: e });
+    }
+
+    // Inngest enforces a per-topic concurrency and rate limit, preventing a
+    // burst of empty-page requests from starting duplicate ingestion work.
+    try {
+      const { inngest } = await import('@/jobs/ingestion');
+      await inngest.send({
+        name: 'app/topic.ingest',
+        data: { topic: topic.name, maxSearchCalls: 6, skipIfRecent: false },
+      });
+    } catch (error) {
+      console.error('[TopicPage] Could not queue background ingestion:', { topic: topic.slug, error });
     }
   }
 
   // Use live data if available, otherwise DB data
   const displayData = isLiveResults && liveSearchData ? liveSearchData : searchData;
   const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
+  const displayTotalResults = displayData.totalResults;
 
   // Generate AI overview and learning path if content exists (only for DB results)
   let aiOverview = null;
@@ -214,10 +262,10 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
           )}
 
           {/* Category quick-nav */}
-          {totalResults > 0 && (
+          {displayTotalResults > 0 && (
             <div className="flex flex-wrap gap-2 mt-6">
               {categoryOrder.map((cat) => {
-                const counts: Record<string, number> = { courses: courses.length, videos: videos.length, podcasts: podcasts.length, shorts: shorts.length, creators: creators.length };
+                const counts: Record<string, number> = { courses: displayCourses.length, videos: displayVideos.length, podcasts: displayPodcasts.length, shorts: displayShorts.length, creators: displayCreators.length };
                 if (!counts[cat]) return null;
                 const labels: Record<string, string> = { courses: 'Courses', videos: 'Videos', podcasts: 'Podcasts', shorts: 'Shorts', creators: 'Creators' };
                 return (
@@ -250,8 +298,18 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
 
           {/* Content Categories — canonical spec order: Courses → Podcasts → Videos → Shorts → Creators
            * Implemented as a filtered array so order is structurally enforced (Issue 3). */}
-          <div className="space-y-14">
-            {[
+          {displayTotalResults === 0 && (
+            <div className="glass-card p-8 text-center" role="status">
+              <h2 className="font-bold text-xl mb-2" style={{ color: 'var(--text-primary)' }}>Content is being prepared</h2>
+              <p style={{ color: 'var(--text-secondary)' }}>
+                We could not find content for this topic yet. It has been queued for ingestion and will be available soon.
+              </p>
+            </div>
+          )}
+
+          <SectionErrorBoundary>
+            <div className="space-y-14">
+              {[
               {
                 key: 'courses',
                 items: displayCourses,
@@ -302,11 +360,23 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
                     </CategorySection>
                   ) : null,
               },
-            ]
-              .filter((section) => section.items.length > 0)
-              .map((section) => section.render(section.items as never))}
-          </div>
+              ]
+                .filter((section) => section.items.length > 0)
+                .map((section) => section.render(section.items as never))}
+            </div>
+          </SectionErrorBoundary>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TopicUnavailable() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center px-4 text-center">
+      <div>
+        <h1 className="font-bold text-2xl mb-3" style={{ color: 'var(--text-primary)' }}>Topic temporarily unavailable</h1>
+        <p style={{ color: 'var(--text-secondary)' }}>Please try again in a moment.</p>
       </div>
     </div>
   );
