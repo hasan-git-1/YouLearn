@@ -146,7 +146,7 @@ export function DiscoveryBento({ topicsList = [] }: DiscoveryBentoProps) {
                   </h4>
                 </div>
                 <Link
-                  href="/topics/full-stack-web-development"
+                  href="/topics/full-stack-development"
                   className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-white/5 hover:bg-cyan-600 transition-colors shrink-0"
                 >
                   <span>Explore Topic</span>

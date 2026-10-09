@@ -52,6 +52,7 @@ import {
   generateDocumentEmbeddings,
 } from '@/services/ai';
 import { SEED_SEARCH_VARIANTS } from './seed-topics';
+import { matchTopic } from '@/config/topics';
 import type {
   IngestionJobInput,
 } from '@/types';
@@ -76,7 +77,13 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
   playlistsIngested: number;
   unitsSpent: number;
 }> {
-  const { topic, maxSearchCalls = 6, skipIfRecent = false } = input;
+  const { topic: requestedTopic, maxSearchCalls = 6, skipIfRecent = false } = input;
+  const topicMatch = matchTopic(requestedTopic);
+  if (!topicMatch.matched) {
+    console.warn(`[ingestion] Ignored unsupported topic: "${requestedTopic}"`);
+    return { jobId: 'not-queued', videosIngested: 0, channelsIngested: 0, playlistsIngested: 0, unitsSpent: 0 };
+  }
+  const topic = topicMatch.topic.name;
 
   // ── Create ingestion job record ───────────────────────────────────────────
   const [job] = await db
@@ -456,7 +463,7 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
 
     // ── Step 12: Link videos to topic ─────────────────────────────────────
     // Find or create the topic row
-    const topicSlug = topic.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const topicSlug = topicMatch.slug;
     const [topicRow] = await db
       .insert(topics)
       .values({ name: topic, slug: topicSlug })

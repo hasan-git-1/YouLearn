@@ -14,12 +14,12 @@ import {
 } from 'lucide-react';
 
 const TOPIC_CHIPS: { label: string; icon: () => React.ReactNode }[] = [
-  { label: 'System Design', icon: () => <Network size={12} className="text-indigo-400" /> },
+  { label: 'Node.js', icon: () => <Network size={12} className="text-indigo-400" /> },
   { label: 'React', icon: () => <span className="text-cyan-400 text-xs leading-none">⚛</span> },
   { label: 'AI Engineering', icon: () => <Sparkles size={12} className="text-violet-400" /> },
   { label: 'Python', icon: () => <Terminal size={12} className="text-emerald-400" /> },
   { label: 'Full Stack', icon: () => <Layers size={12} className="text-cyan-400" /> },
-  { label: 'Stock Market', icon: () => <TrendingUp size={12} className="text-amber-400" /> },
+  { label: 'JavaScript', icon: () => <TrendingUp size={12} className="text-amber-400" /> },
 ];
 
 interface CommandSearchProps {

@@ -21,10 +21,10 @@ import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
 import { keywordSearch } from '@/services/search/keyword';
 import { classifyIntent } from '@/services/search/intent';
-import { generateTopicOverview } from '@/services/ai';
-import { resolveSeedTopic } from '@/services/ingestion/seed-topics';
 import { checkDbConnection, DatabaseConnectionError } from '@/db';
-import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
+import type { AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
+import { matchTopic } from '@/config/topics';
+import { TopicUniverse } from '@/components/topics/TopicUniverse';
 
 // Fire-and-forget ingestion trigger for cold-start — server-side
 async function triggerIngestion(query: string) {
@@ -54,6 +54,17 @@ function ColdStartState({ query }: { query: string }) {
   );
 }
 
+function UnavailableTopicState() {
+  return (
+    <div>
+      <div className="glass-card p-8 text-center" role="status">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>This topic is unavailable right now. We&apos;re expanding our learning universe.</h1>
+      </div>
+      <TopicUniverse />
+    </div>
+  );
+}
+
 const CATEGORY_META: Record<
   keyof SearchResultCategories,
   { label: string; icon: () => React.ReactNode; twoColumn?: boolean }
@@ -72,8 +83,12 @@ interface SearchResultsProps {
 
 export async function SearchResults({ query }: SearchResultsProps) {
   const totalStart = performance.now();
-  const seededTopic = resolveSeedTopic(query);
-  const databaseQuery = seededTopic?.name ?? query;
+  // This is intentionally the first operation: unsupported requests must not
+  // reach Postgres, YouTube, Gemini, or the background-ingestion queue.
+  const topicMatch = matchTopic(query);
+  if (!topicMatch.matched) return <UnavailableTopicState />;
+  const seededTopic = topicMatch.topic;
+  const databaseQuery = seededTopic.name;
 
   if (seededTopic) {
     console.log(`[SearchResults] Resolved seeded topic: "${query}" → "${seededTopic.slug}" (${seededTopic.name})`);
@@ -86,7 +101,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
   try {
     searchData = await keywordSearch({
       q: databaseQuery,
-      pool: 50,
+      pool: 30,
       topicSlug: seededTopic?.slug,
     });
     console.log(`[SearchResults] DB search took ${Math.round(performance.now() - dbStart)}ms — ${searchData.totalResults} results for "${query}"`);
@@ -147,20 +162,14 @@ export async function SearchResults({ query }: SearchResultsProps) {
   // Classify intent to determine section order
   const { categoryOrder } = classifyIntent(query);
 
-  // Generate AI overview (only for DB results, not live)
-  let aiOverview = null;
-  if (!isLiveResults && totalResults > 0 && !seededTopic) {
-    try {
-      const allContent = [
-        ...courses.map((c) => ({ title: c.title, description: null, contentType: 'course' })),
-        ...videos.map((v) => ({ title: v.title, description: v.description, contentType: v.contentType })),
-        ...podcasts.map((p) => ({ title: p.title, description: p.description, contentType: p.contentType })),
-      ];
-      aiOverview = await generateTopicOverview(query, allContent);
-    } catch (e) {
-      console.error('[SearchResults] AI overview error:', e);
-    }
-  }
+  // Stable topic overview: delivered for every supported topic with no per-view LLM call.
+  const aiOverview: AITopicOverview = {
+    what_is_it: seededTopic.description,
+    what_to_learn: [...seededTopic.learn],
+    career_context: `Build practical ${seededTopic.name} skills through the guides, courses, and videos below.`,
+    recommended_starting_point: seededTopic.learn[0] ?? 'Start with the fundamentals.',
+    confidence_note: 'Curated from the Tubiq topic catalogue.',
+  };
 
   console.log(`[SearchResults] Total render pipeline for "${query}": ${Math.round(performance.now() - totalStart)}ms (live=${isLiveResults})`);
 
@@ -189,9 +198,9 @@ export async function SearchResults({ query }: SearchResultsProps) {
         </p>
       </div>
 
-      {/* AI Topic Overview (only for DB results) */}
+      {/* AI Topic Overview */}
       {aiOverview && (
-        <AIOverviewCard topicName={query} overview={aiOverview} />
+        <AIOverviewCard topicName={seededTopic.name} overview={aiOverview} />
       )}
 
       {/*
@@ -218,7 +227,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
                   title={CATEGORY_META.courses.label}
                   icon={CATEGORY_META.courses.icon()}
                   count={items.length}
-                  defaultVisible={5}
+                  defaultVisible={8}
                 >
                   {items.map((course) => (
                     <CourseCard key={course.id} course={course as Playlist} />
@@ -238,7 +247,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
                   title={CATEGORY_META.podcasts.label}
                   icon={CATEGORY_META.podcasts.icon()}
                   count={items.length}
-                  defaultVisible={5}
+                  defaultVisible={8}
                 >
                   {items.map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
@@ -258,7 +267,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
                   title={CATEGORY_META.videos.label}
                   icon={CATEGORY_META.videos.icon()}
                   count={items.length}
-                  defaultVisible={5}
+                  defaultVisible={8}
                 >
                   {items.map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
@@ -278,7 +287,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
                   title={CATEGORY_META.shorts.label}
                   icon={CATEGORY_META.shorts.icon()}
                   count={items.length}
-                  defaultVisible={5}
+                  defaultVisible={8}
                 >
                   {items.map((video) => (
                     <VideoCard key={video.id} video={video as VideoType} />
@@ -299,7 +308,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
                   icon={CATEGORY_META.creators.icon()}
                   count={items.length}
                   twoColumn
-                  defaultVisible={5}
+                  defaultVisible={8}
                 >
                   {items.map((ch) => (
                     <CreatorCard key={ch.id} channel={ch as Channel} />
@@ -370,4 +379,3 @@ function DBQueryErrorState() {
     </div>
   );
 }
-

@@ -16,6 +16,7 @@ import { videos, channels, playlists, videoTopics, topics } from '@/db/schema';
 import { eq, and, sql, inArray, isNotNull } from 'drizzle-orm';
 import type { SearchResultCategories, ContentType, Difficulty } from '@/types';
 import { validateContentType, validateDifficulty } from '@/services/classification/rules';
+import { getTopicBySlug } from '@/config/topics';
 
 export interface KeywordSearchOptions {
   q: string;
@@ -46,6 +47,19 @@ export function matchesQueryStrictly(query: string, title: string, description: 
   // A multi-word intent needs all its terms; a one-word intent needs its
   // explicit topic word. This deliberately rejects adjacent generic content.
   return matched === tokens.length;
+}
+
+/** Final local guard for older database rows and live migration overlap. */
+export function passesTopicRelevance(topicSlug: string | undefined, title: string, description: string | null): boolean {
+  if (!topicSlug) return true;
+  const topic = getTopicBySlug(topicSlug);
+  if (!topic) return false;
+  const text = `${title} ${description ?? ''}`.toLowerCase();
+  const includesTerm = (term: string) => term.includes(' ')
+    ? text.includes(term)
+    : new RegExp(`\\b${term}\\b`).test(text);
+  if (topic.excludeKeywords.some(includesTerm)) return false;
+  return topic.includeKeywords.some(includesTerm);
 }
 
 /**
@@ -127,7 +141,8 @@ export async function keywordSearch(
   `);
 
   const allVideoRows = ((videoRows.rows ?? []) as Array<Record<string, unknown>>)
-    .filter((row) => topicSlug || matchesQueryStrictly(q, row.title as string, row.description as string | null));
+    .filter((row) => Boolean(topicSlug) || matchesQueryStrictly(q, row.title as string, row.description as string | null))
+    .filter((row) => passesTopicRelevance(topicSlug, row.title as string, row.description as string | null));
 
   // ── Separate by content_type ──────────────────────────────────────────────
   const videoResults = allVideoRows
@@ -197,7 +212,8 @@ export async function keywordSearch(
   `);
 
   const courseResults = ((courseRows.rows ?? []) as Array<Record<string, unknown>>)
-    .filter((row) => topicSlug || matchesQueryStrictly(q, row.title as string, null))
+    .filter((row) => Boolean(topicSlug) || matchesQueryStrictly(q, row.title as string, null))
+    .filter((row) => passesTopicRelevance(topicSlug, row.title as string, null))
     .slice(0, fetchLimit)
     .map(normalizeCourseRow);
 

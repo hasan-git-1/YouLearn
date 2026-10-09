@@ -15,7 +15,7 @@ export function FloatingEcosystemCards() {
         floatDuration={6.5}
       >
         <Link
-          href="/topics/full-stack-web-development"
+          href="/topics/full-stack-development"
           className="block w-[280px] p-4 rounded-2xl border border-white/10 shadow-[0_16px_36px_rgba(0,0,0,0.55)] hover:border-indigo-500/40 transition-all duration-300 group pointer-events-auto"
           style={{
             background: 'linear-gradient(135deg, rgba(12, 16, 34, 0.85), rgba(7, 10, 22, 0.90))',

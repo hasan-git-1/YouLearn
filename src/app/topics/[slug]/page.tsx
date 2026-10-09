@@ -1,13 +1,9 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { GraduationCap, Video, Mic, Zap, Users, Hash } from 'lucide-react';
-import { db } from '@/db';
-import { topics } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import { keywordSearch } from '@/services/search/keyword';
 import { classifyIntent } from '@/services/search/intent';
-import { generateTopicOverview, generateLearningPath } from '@/services/ai';
+import { generateLearningPath } from '@/services/ai';
 import { getSeedTopicBySlug } from '@/services/ingestion/seed-topics';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
@@ -16,7 +12,9 @@ import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
-import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
+import type { AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
+import { getTopicBySlug } from '@/config/topics';
+import { TopicUniverse } from '@/components/topics/TopicUniverse';
 
 type TopicSearchData = SearchResultCategories & { totalResults: number };
 
@@ -85,33 +83,21 @@ interface TopicPageProps {
 
 export async function generateMetadata({ params }: TopicPageProps): Promise<Metadata> {
   const { slug } = await params;
-  let topic: { name: string; description: string | null } | undefined;
-  try {
-    topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
-  } catch (error) {
-    console.error('[TopicPage] Metadata topic lookup failed:', { slug, error });
+  const configuredTopic = getTopicBySlug(slug);
+  if (!configuredTopic) {
+    return { title: 'Topic Unavailable — Tubiq', robots: { index: false, follow: false } };
   }
-  if (!topic) return { title: 'Topic Not Found — Tubiq' };
   return {
-    title: `${topic.name} — Tubiq`,
-    description: topic.description ?? `Discover the best YouTube content to learn ${topic.name}. Courses, videos, podcasts and top creators — curated by Tubiq.`,
+    title: `${configuredTopic.name} — Tubiq`,
+    description: configuredTopic.description,
   };
 }
 
 export default async function TopicPage({ params }: TopicPageProps) {
   const { slug } = await params;
-
-  let topic: { name: string; slug: string; description: string | null } | undefined;
-  try {
-    topic = await db.query.topics.findFirst({ where: eq(topics.slug, slug) });
-  } catch (error) {
-    // A transient database failure is not a missing topic. Avoid turning it
-    // into a misleading 404 while preserving the server-side diagnostic.
-    console.error('[TopicPage] Topic lookup failed:', { slug, error });
-    return <TopicUnavailable />;
-  }
-
-  if (!topic) notFound();
+  const configuredTopic = getTopicBySlug(slug);
+  if (!configuredTopic) return <TopicUnavailable />;
+  const topic = configuredTopic;
 
   return (
     <div style={{ minHeight: '100dvh' }}>
@@ -128,7 +114,7 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   try {
     searchData = await keywordSearch({
       q: topic.name,
-      pool: 50,
+      pool: 30,
       topicSlug: seededTopic?.slug,
     });
   } catch (error) {
@@ -171,8 +157,15 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
   const displayTotalResults = displayData.totalResults;
 
-  // Generate AI overview and learning path if content exists (only for DB results)
-  let aiOverview = null;
+  // Stable topic overview is delivered from the scope-locked catalogue, so a
+  // page view never needs a Gemini call just to render introductory guidance.
+  const aiOverview: AITopicOverview = {
+    what_is_it: seededTopic?.description ?? topic.description,
+    what_to_learn: [...(seededTopic?.learn ?? [])],
+    career_context: `Build practical ${topic.name} skills through the guides, courses, and videos below.`,
+    recommended_starting_point: seededTopic?.learn[0] ?? 'Start with the fundamentals.',
+    confidence_note: 'Curated from the Tubiq topic catalogue.',
+  };
   let aiLearningPath = null;
 
   if (!isLiveResults && totalResults > 0 && !seededTopic) {
@@ -204,17 +197,8 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
     ];
 
     try {
-      const [overviewRes, pathRes] = await Promise.allSettled([
-        generateTopicOverview(topic.name, allContent),
-        generateLearningPath(topic.name, allContent),
-      ]);
-
-      if (overviewRes.status === 'fulfilled') {
-        aiOverview = overviewRes.value;
-      }
-      if (pathRes.status === 'fulfilled') {
-        aiLearningPath = pathRes.value;
-      }
+      const pathRes = await generateLearningPath(topic.name, allContent);
+      aiLearningPath = pathRes;
     } catch (e) {
       console.error('[TopicPage] AI generation error:', e);
     }
@@ -372,12 +356,10 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
 }
 
 function TopicUnavailable() {
-  return (
-    <div className="flex min-h-dvh items-center justify-center px-4 text-center">
-      <div>
-        <h1 className="font-bold text-2xl mb-3" style={{ color: 'var(--text-primary)' }}>Topic temporarily unavailable</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Please try again in a moment.</p>
-      </div>
+  return <main className="px-4 py-12" style={{ maxWidth: 1280, margin: '0 auto' }}>
+    <div className="glass-card p-8 text-center">
+      <h1 className="font-bold text-2xl" style={{ color: 'var(--text-primary)' }}>This topic is unavailable right now. We&apos;re expanding our learning universe.</h1>
     </div>
-  );
+    <TopicUniverse />
+  </main>;
 }

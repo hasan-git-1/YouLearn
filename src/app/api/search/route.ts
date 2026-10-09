@@ -25,7 +25,7 @@ import { db, checkDbConnection, DatabaseConnectionError } from '@/db';
 import { searches } from '@/db/schema';
 import { and, eq, gte, sql } from 'drizzle-orm';
 import type { SearchResponse } from '@/types';
-import { resolveSeedTopic } from '@/services/ingestion/seed-topics';
+import { matchTopic, TOPICS } from '@/config/topics';
 
 const COLD_START_RATE_LIMIT = 3; // max cold-start triggers per user per day
 
@@ -37,18 +37,21 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get('q')?.trim();
     const limit = Math.min(parseInt(searchParams.get('limit') ?? '12', 10), 50);
 
-    if (!q || q.length < 2) {
-      return NextResponse.json(
-        { error: 'Query parameter "q" is required (min 2 characters)' },
-        { status: 400 }
-      );
+    const topicMatch = matchTopic(q ?? '');
+    if (!topicMatch.matched) {
+      return NextResponse.json({
+        matched: false,
+        message: "This topic is unavailable right now. We're expanding our learning universe.",
+        topics: TOPICS,
+      }, { headers: { 'X-Robots-Tag': 'noindex' } });
     }
 
     // ── Step 1: Classify intent ──────────────────────────────────────────
-    const intentResult = classifyIntent(q);
+    const searchQuery = q ?? '';
+    const intentResult = classifyIntent(searchQuery);
 
     // ── Step 2: Resolve seeded topic ─────────────────────────────────────
-    const seededTopic = resolveSeedTopic(q);
+    const seededTopic = topicMatch.topic;
     if (seededTopic) {
       console.log(`[search] Resolved seeded topic: "${q}" → "${seededTopic.slug}"`);
     }
@@ -58,7 +61,7 @@ export async function GET(request: NextRequest) {
     let searchResult;
     try {
       searchResult = await keywordSearch({
-        q: seededTopic?.name ?? q,
+        q: seededTopic.name,
         limit,
         pool: limit,
         topicSlug: seededTopic?.slug,
@@ -93,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     // ── Step 4: Log search (fire-and-forget, non-blocking) ───────────────
     // We don't block the response on this
-    db.insert(searches).values({ query: q }).catch(() => {
+    db.insert(searches).values({ query: searchQuery }).catch(() => {
       // Non-critical — don't fail the request if logging fails
     });
 
@@ -104,7 +107,7 @@ export async function GET(request: NextRequest) {
       try {
         const liveStart = performance.now();
         const { fastSearch } = await import('@/services/search/fast');
-        liveResults = await fastSearch({ q: seededTopic?.name ?? q });
+        liveResults = await fastSearch({ q: seededTopic.name });
         console.log(`[search] Live fallback took ${Math.round(performance.now() - liveStart)}ms — ${liveResults.totalResults} results`);
       } catch (e) {
         console.error('[search] Live fallback failed:', e);
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
       // If live fallback returned results, use them
       if (liveResults && liveResults.totalResults > 0) {
         const response: SearchResponse = {
-          query: q,
+          query: searchQuery,
           intent: intentResult.intent,
           categoryOrder: intentResult.categoryOrder,
           results: {
@@ -130,7 +133,7 @@ export async function GET(request: NextRequest) {
         console.log(`[search] Total pipeline for "${q}": ${Math.round(performance.now() - totalStart)}ms (live fallback)`);
 
         // Also trigger background ingestion so next search is from DB
-        void triggerBackgroundIngestion(q, request);
+        void triggerBackgroundIngestion(seededTopic.name, request);
 
         return NextResponse.json(response, {
           headers: {
@@ -141,10 +144,10 @@ export async function GET(request: NextRequest) {
       }
 
       // True cold start — no results from either path
-      await triggerBackgroundIngestion(q, request);
+      await triggerBackgroundIngestion(seededTopic.name, request);
 
       const response: SearchResponse = {
-        query: q,
+        query: searchQuery,
         intent: intentResult.intent,
         categoryOrder: intentResult.categoryOrder,
         results: { courses: [], videos: [], podcasts: [], shorts: [], creators: [] },
@@ -157,7 +160,7 @@ export async function GET(request: NextRequest) {
 
     // ── Step 6: Return results ───────────────────────────────────────────
     const response: SearchResponse = {
-      query: q,
+      query: searchQuery,
       intent: intentResult.intent,
       categoryOrder: intentResult.categoryOrder,
       results: {
@@ -234,4 +237,3 @@ async function triggerBackgroundIngestion(q: string, request: NextRequest) {
     console.error('[search] Failed to trigger background ingestion:', e);
   }
 }
-

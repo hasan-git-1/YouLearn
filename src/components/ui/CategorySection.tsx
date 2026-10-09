@@ -25,7 +25,7 @@ export function CategorySection({
   children,
   className,
   twoColumn = false,
-  defaultVisible = 5,
+  defaultVisible = 8,
 }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(false);
   const cards = Children.toArray(children);

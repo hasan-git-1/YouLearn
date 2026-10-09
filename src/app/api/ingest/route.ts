@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { inngest } from '@/jobs/ingestion';
+import { matchTopic, TOPICS } from '@/config/topics';
 
 export async function GET(request: NextRequest) {
   // Simple shared-secret guard — Phase 3 will use proper auth
@@ -22,22 +23,24 @@ export async function GET(request: NextRequest) {
   const topic = searchParams.get('topic')?.trim();
   const maxSearchCalls = parseInt(searchParams.get('max') ?? '5', 10);
 
-  if (!topic) {
-    return NextResponse.json(
-      { error: 'topic query parameter is required' },
-      { status: 400 }
-    );
+  const topicMatch = matchTopic(topic ?? '');
+  if (!topicMatch.matched) {
+    return NextResponse.json({
+      matched: false,
+      message: "This topic is unavailable right now. We're expanding our learning universe.",
+      topics: TOPICS,
+    }, { headers: { 'X-Robots-Tag': 'noindex' } });
   }
 
   await inngest.send({
     name: 'app/topic.ingest',
-    data: { topic, maxSearchCalls, skipIfRecent: false },
+    data: { topic: topicMatch.topic.name, maxSearchCalls, skipIfRecent: false },
   });
 
   return NextResponse.json({
     ok: true,
-    message: `Ingestion job queued for "${topic}"`,
-    topic,
+    message: `Ingestion job queued for "${topicMatch.topic.name}"`,
+    topic: topicMatch.topic.name,
     maxSearchCalls,
   });
 }

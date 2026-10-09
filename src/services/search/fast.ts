@@ -34,8 +34,8 @@ import type {
   RawYouTubePlaylist,
 } from '@/types';
 
-/** Max items to hold per bucket for View More (5 default + 10 reserve) */
-const FAST_SEARCH_POOL = 15;
+/** Delivered client-side pool; the first eight are visible and the rest reveal without a request. */
+const FAST_SEARCH_POOL = 30;
 
 interface FastSearchOptions {
   q: string;

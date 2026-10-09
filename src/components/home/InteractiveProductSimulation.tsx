@@ -77,7 +77,7 @@ const SIMULATIONS: Record<string, SimulationData> = {
       duration: '11h 45m',
       rating: '4.98',
       modules: '16 Modules',
-      slug: 'full-stack-web-development',
+      slug: 'full-stack-development',
     },
     keyVideos: [
       {

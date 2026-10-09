@@ -4,17 +4,9 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TOPICS } from '@/config/topics';
 
-const POPULAR_SUGGESTIONS = [
-  'Full Stack Web Development',
-  'AI Engineering',
-  'Data Science',
-  'Python Programming',
-  'System Design',
-  'Machine Learning',
-  'React Development',
-  'DevOps Cloud Engineering',
-];
+const POPULAR_SUGGESTIONS = TOPICS.map((topic) => topic.name);
 
 interface SearchBarProps {
   placeholder?: string;
