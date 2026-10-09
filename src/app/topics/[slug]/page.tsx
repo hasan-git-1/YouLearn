@@ -160,7 +160,7 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   // Stable topic overview is delivered from the scope-locked catalogue, so a
   // page view never needs a Gemini call just to render introductory guidance.
   const aiOverview: AITopicOverview = {
-    what_is_it: seededTopic?.description ?? topic.description,
+    what_is_it: seededTopic?.description ?? topic.description ?? `Learn the core skills of ${topic.name}.`,
     what_to_learn: [...(seededTopic?.learn ?? [])],
     career_context: `Build practical ${topic.name} skills through the guides, courses, and videos below.`,
     recommended_starting_point: seededTopic?.learn[0] ?? 'Start with the fundamentals.',
