@@ -240,6 +240,17 @@ export async function getPlaylistDetails(
 // ─── Fast Search Variants (non-throwing quota) ─────────────────────────────────
 // Used by fastSearch for instant results — gracefully degrades if quota exceeded
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T, name: string): Promise<T> {
+  let timer: NodeJS.Timeout;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      console.warn(`[YouTube] ${name} timed out after ${ms}ms — returning fallback`);
+      resolve(fallback);
+    }, ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Fast search.list — 100 units per call, non-throwing on quota exceeded.
  * Returns empty array if quota exceeded or any error occurs.
@@ -255,18 +266,23 @@ export async function fastSearchContent(
 
   try {
     const yt = getYouTubeClient();
-    const response = await yt.search.list({
-      part: ['snippet'],
-      q: options.query,
-      maxResults: options.maxResults ?? 25,
-      type: [options.type ?? 'video'],
-      videoDuration: options.videoDuration,
-      order: options.order ?? 'relevance',
-      relevanceLanguage: 'en',
-      safeSearch: 'moderate',
-    });
+    const response = await withTimeout(
+      yt.search.list({
+        part: ['snippet'],
+        q: options.query,
+        maxResults: options.maxResults ?? 25,
+        type: [options.type ?? 'video'],
+        videoDuration: options.videoDuration,
+        order: options.order ?? 'relevance',
+        relevanceLanguage: 'en',
+        safeSearch: 'moderate',
+      }),
+      5000,
+      { data: { items: [] } } as any,
+      'fastSearchContent'
+    );
 
-    return (response.data.items ?? []).map((item) => ({
+    return (response.data.items ?? []).map((item: youtube_v3.Schema$SearchResult) => ({
       id:
         item.id?.videoId ??
         item.id?.channelId ??
@@ -316,10 +332,15 @@ export async function fastGetVideoDetails(
         break;
       }
 
-      const response = await yt.videos.list({
-        part: ['snippet', 'contentDetails', 'statistics'],
-        id: batch,
-      });
+      const response = await withTimeout(
+        yt.videos.list({
+          part: ['snippet', 'contentDetails', 'statistics'],
+          id: batch,
+        }),
+        5000,
+        { data: { items: [] } } as any,
+        'fastGetVideoDetails'
+      );
 
       for (const item of response.data.items ?? []) {
         results.push({
@@ -378,10 +399,15 @@ export async function fastGetChannelDetails(
         break;
       }
 
-      const response = await yt.channels.list({
-        part: ['snippet', 'statistics'],
-        id: batch,
-      });
+      const response = await withTimeout(
+        yt.channels.list({
+          part: ['snippet', 'statistics'],
+          id: batch,
+        }),
+        5000,
+        { data: { items: [] } } as any,
+        'fastGetChannelDetails'
+      );
 
       for (const item of response.data.items ?? []) {
         results.push({
@@ -432,10 +458,15 @@ export async function fastGetPlaylistDetails(
         break;
       }
 
-      const response = await yt.playlists.list({
-        part: ['snippet', 'contentDetails'],
-        id: batch,
-      });
+      const response = await withTimeout(
+        yt.playlists.list({
+          part: ['snippet', 'contentDetails'],
+          id: batch,
+        }),
+        5000,
+        { data: { items: [] } } as any,
+        'fastGetPlaylistDetails'
+      );
 
       for (const item of response.data.items ?? []) {
         results.push({

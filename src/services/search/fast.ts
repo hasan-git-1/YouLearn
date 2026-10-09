@@ -57,106 +57,109 @@ export async function fastSearch(
   }
 
   try {
-    // ── Step 1: Multi-query YouTube fetch (3 variants → wider candidate pool) ──
+    const tStart = performance.now();
+
+    // ── Step 1: Multi-query video & playlist fetch in PARALLEL ───────────────
+    const t1Start = performance.now();
     const queryVariants = [
       q,
       `${q} tutorial`,
       `${q} course`,
     ];
 
-    const allSearchResults = await Promise.all(
-      queryVariants.map((variant) =>
-        fastSearchContent({
-          query: variant,
-          maxResults: 25, // 25 per variant × 3 = up to 75 candidates
-          type: 'video',
-          order: 'relevance',
-        })
-      )
-    );
+    const [allVideoResults, playlistSearchResults] = await Promise.all([
+      Promise.all(
+        queryVariants.map((variant) =>
+          fastSearchContent({
+            query: variant,
+            maxResults: 25, // 25 per variant × 3 = up to 75 candidates
+            type: 'video',
+            order: 'relevance',
+          })
+        )
+      ),
+      fastSearchContent({
+        query: `${q} course playlist`,
+        maxResults: 25,
+        type: 'playlist',
+        order: 'relevance',
+      }),
+    ]);
+    const t1 = Math.round(performance.now() - t1Start);
+    console.log(`[fastSearch] Stage 1 (YouTube candidate search): ${t1}ms`);
 
-    // Deduplicate by ID across all variant results
+    // Deduplicate video IDs across all variant results
     const seenVideoIds = new Set<string>();
-    const deduplicatedResults = allSearchResults.flat().filter((r) => {
+    const deduplicatedResults = allVideoResults.flat().filter((r) => {
       if (!r.id || r.type !== 'video' || seenVideoIds.has(r.id)) return false;
       seenVideoIds.add(r.id);
       return true;
     });
 
     const videoIds = deduplicatedResults.map((r) => r.id);
-
-    if (videoIds.length === 0) {
-      return { courses: [], videos: [], podcasts: [], shorts: [], creators: [], totalResults: 0 };
-    }
-
-    // ── Step 2: Get full video details ───────────────────────────────────────
-    const rawVideosAll = await fastGetVideoDetails(videoIds);
-
-    // ── Step 3: Relevance filter (BEFORE classification — fixes Defect 1) ────
-    // This is the strict topical gate. A Python tutorial MUST NOT pass through
-    // when the user searched "English Communication".
-    const relevanceMap = await filterTopicallyRelevant(
-      q,
-      rawVideosAll.map((v) => ({
-        id: v.id,
-        title: v.title,
-        description: v.description || null,
-        channelName: v.channelTitle || null,
-      }))
-    );
-
-    const rawVideos = rawVideosAll.filter(
-      (v) => relevanceMap.get(v.id)?.isRelevant === true
-    );
-
-    console.log(
-      `[fastSearch] Relevance gate: ${rawVideos.length}/${rawVideosAll.length} candidates kept for "${q}"`
-    );
-
-    // ── Step 4: Get unique channel IDs and fetch channel details ─────────────
-    const channelIds = [...new Set(rawVideos.map((v) => v.channelId).filter(Boolean))];
-    let rawChannels = await fastGetChannelDetails(channelIds);
-
-    // ── Step 5: Search for playlists (courses) ───────────────────────────────
-    const playlistSearchResults = await fastSearchContent({
-      query: `${q} course playlist`,
-      maxResults: 25,
-      type: 'playlist',
-      order: 'relevance',
-    });
-
     const playlistIds = playlistSearchResults
       .filter((r) => r.type === 'playlist' && r.id)
       .map((r) => r.id);
 
-    let rawPlaylistsAll: RawYouTubePlaylist[] = [];
-    if (playlistIds.length > 0) {
-      rawPlaylistsAll = await fastGetPlaylistDetails(playlistIds);
+    if (videoIds.length === 0 && playlistIds.length === 0) {
+      console.log(`[fastSearch] 0 video and 0 playlist candidates found for "${q}"`);
+      return { courses: [], videos: [], podcasts: [], shorts: [], creators: [], totalResults: 0 };
     }
 
-    const playlistChannelIds = rawPlaylistsAll.map((playlist) => playlist.channelId).filter(Boolean);
-    const missingPlaylistChannelIds = playlistChannelIds.filter((channelId) => !channelIds.includes(channelId));
-    if (missingPlaylistChannelIds.length > 0) {
-      rawChannels = await fastGetChannelDetails([...channelIds, ...missingPlaylistChannelIds]);
-    }
-    const channelMap = new Map(rawChannels.map((channel) => [channel.id, channel]));
+    // ── Step 2: Fetch video details & playlist details in PARALLEL ───────────
+    const t2Start = performance.now();
+    const [rawVideosAll, rawPlaylistsAll] = await Promise.all([
+      videoIds.length > 0 ? fastGetVideoDetails(videoIds) : Promise.resolve([]),
+      playlistIds.length > 0 ? fastGetPlaylistDetails(playlistIds) : Promise.resolve([]),
+    ]);
+    const t2 = Math.round(performance.now() - t2Start);
+    console.log(`[fastSearch] Stage 2 (Candidate details fetch): ${t2}ms — ${rawVideosAll.length} videos, ${rawPlaylistsAll.length} playlists`);
 
-    // Relevance filter for playlists too
-    let rawPlaylists: RawYouTubePlaylist[] = rawPlaylistsAll;
-    if (rawPlaylistsAll.length > 0) {
-      const playlistRelevanceMap = await filterTopicallyRelevant(
+    // ── Step 3: Topical relevance filters in PARALLEL ────────────────────────
+    const t3Start = performance.now();
+    const [relevanceMap, playlistRelevanceMap] = await Promise.all([
+      filterTopicallyRelevant(
         q,
-        rawPlaylistsAll.map((p) => ({
-          id: p.id,
-          title: p.title,
-          description: p.description || null,
-          channelName: null,
+        rawVideosAll.map((v) => ({
+          id: v.id,
+          title: v.title,
+          description: v.description || null,
+          channelName: v.channelTitle || null,
         }))
-      );
-      rawPlaylists = rawPlaylistsAll.filter(
-        (p) => playlistRelevanceMap.get(p.id)?.isRelevant === true
-      );
-    }
+      ),
+      rawPlaylistsAll.length > 0
+        ? filterTopicallyRelevant(
+            q,
+            rawPlaylistsAll.map((p) => ({
+              id: p.id,
+              title: p.title,
+              description: p.description || null,
+              channelName: null,
+            }))
+          )
+        : Promise.resolve(new Map()),
+    ]);
+
+    const rawVideos = rawVideosAll.filter(
+      (v) => relevanceMap.get(v.id)?.isRelevant === true
+    );
+    const rawPlaylists = rawPlaylistsAll.filter(
+      (p) => playlistRelevanceMap.get(p.id)?.isRelevant === true
+    );
+    const t3 = Math.round(performance.now() - t3Start);
+    console.log(
+      `[fastSearch] Stage 3 (Topical relevance filter): ${t3}ms — ${rawVideos.length}/${rawVideosAll.length} videos, ${rawPlaylists.length}/${rawPlaylistsAll.length} playlists kept for "${q}"`
+    );
+
+    // ── Step 4: Fetch channel details & classify/normalize in PARALLEL ───────
+    const t4Start = performance.now();
+    const allChannelIds = [...new Set([
+      ...rawVideos.map((v) => v.channelId),
+      ...rawPlaylists.map((p) => p.channelId),
+    ].filter(Boolean))];
+
+    const rawChannels = await fastGetChannelDetails(allChannelIds);
+    const channelMap = new Map(rawChannels.map((channel) => [channel.id, channel]));
 
     // ── Step 6: Classify and normalize videos ────────────────────────────────
     // Only process videos that passed the relevance gate (Step 3)
@@ -284,6 +287,9 @@ export async function fastSearch(
       }));
 
     const totalResults = videos.length + podcasts.length + shorts.length + courses.length + creators.length;
+    const t4 = Math.round(performance.now() - t4Start);
+    console.log(`[fastSearch] Stage 4 (Channel details & classification): ${t4}ms`);
+    console.log(`[fastSearch] Total pipeline for "${q}": ${Math.round(performance.now() - tStart)}ms — ${totalResults} results found`);
 
     // Return the full pool per bucket (up to FAST_SEARCH_POOL items).
     // CategorySection renders top 5 by default; View More reveals the rest

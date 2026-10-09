@@ -125,31 +125,40 @@ export async function ingestTopic(input: IngestionJobInput): Promise<{
       }
     }
 
-    // ── Step 1: Search for videos ─────────────────────────────────────────
-    console.log(`[ingestion] Searching YouTube for "${topic}" (${maxSearchCalls} calls)`);
-    const searchResults: Awaited<ReturnType<typeof searchContent>> = [];
+    // ── Step 1: Search for videos & playlists in parallel ────────────────
+    console.log(`[ingestion] Searching YouTube for "${topic}" (${maxSearchCalls} calls in parallel)`);
+    const searchQueries: { query: string; order: 'relevance' | 'viewCount' }[] = [];
 
     for (let i = 0; i < maxSearchCalls; i++) {
       // Vary the search slightly to get broader coverage
       const searchQuery = SEED_SEARCH_VARIANTS(topic)[i] ?? `${topic} tutorial`;
-
-      const results = await searchContent({
+      searchQueries.push({
         query: searchQuery,
-        maxResults: 50,
-        type: 'video',
         order: i === 0 ? 'relevance' : 'viewCount',
       });
-
-      searchResults.push(...results);
     }
 
-    // Also search for playlists
-    const playlistSearchResults = await searchContent({
-      query: `${topic} course playlist`,
-      maxResults: 25,
-      type: 'playlist',
-      order: 'relevance',
-    });
+    const [searchResultsBatches, playlistSearchResults] = await Promise.all([
+      Promise.all(
+        searchQueries.map((sq) =>
+          searchContent({
+            query: sq.query,
+            maxResults: 50,
+            type: 'video',
+            order: sq.order,
+          })
+        )
+      ),
+      // Also search for playlists concurrently
+      searchContent({
+        query: `${topic} course playlist`,
+        maxResults: 25,
+        type: 'playlist',
+        order: 'relevance',
+      }),
+    ]);
+
+    const searchResults = searchResultsBatches.flat();
 
     // ── Step 2: Deduplicate search result IDs ─────────────────────────────
     const videoIds = [...new Set(

@@ -4,6 +4,12 @@
  * Fetches search data server-side via the internal search service
  * (never via a fetch to /api/search — direct service call is faster).
  * Renders categorized results in intent-ranked order.
+ *
+ * Search pipeline:
+ *   1. Resolve seeded topic (instant, no DB/API)
+ *   2. Keyword search against Postgres
+ *   3. If 0 results → live fallback via fastSearch (direct YouTube API)
+ *   4. If 0 results from both → cold-start state + background ingestion
  */
 
 import type React from 'react';
@@ -17,6 +23,7 @@ import { keywordSearch } from '@/services/search/keyword';
 import { classifyIntent } from '@/services/search/intent';
 import { generateTopicOverview } from '@/services/ai';
 import { resolveSeedTopic } from '@/services/ingestion/seed-topics';
+import { checkDbConnection, DatabaseConnectionError } from '@/db';
 import type { Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
 
 // Fire-and-forget ingestion trigger for cold-start — server-side
@@ -64,43 +71,85 @@ interface SearchResultsProps {
 }
 
 export async function SearchResults({ query }: SearchResultsProps) {
+  const totalStart = performance.now();
   const seededTopic = resolveSeedTopic(query);
   const databaseQuery = seededTopic?.name ?? query;
 
-  // Direct service call — no HTTP overhead
-  // pool=50 gives each section up to 50 items; CategorySection shows 5 by default
-  // and reveals the rest via "View More" without re-querying YouTube.
+  if (seededTopic) {
+    console.log(`[SearchResults] Resolved seeded topic: "${query}" → "${seededTopic.slug}" (${seededTopic.name})`);
+  }
+
+  // ── Step 1: Try keyword search against DB ──────────────────────────────
   let searchData;
+  let dbReachable = true;
+  const dbStart = performance.now();
   try {
     searchData = await keywordSearch({
       q: databaseQuery,
       pool: 50,
       topicSlug: seededTopic?.slug,
     });
+    console.log(`[SearchResults] DB search took ${Math.round(performance.now() - dbStart)}ms — ${searchData.totalResults} results for "${query}"`);
   } catch (error) {
     console.error('[SearchResults] DB error:', error);
-    return <DBErrorState />;
+
+    // Determine if this is a connection error vs query error
+    try {
+      await checkDbConnection();
+    } catch (connError) {
+      if (connError instanceof DatabaseConnectionError) {
+        dbReachable = false;
+        return <DBUnreachableState />;
+      }
+    }
+
+    // DB is reachable but query failed (bad SQL, etc.)
+    return <DBQueryErrorState />;
   }
 
   const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
 
-  // Cold start: no results in DB yet — use fast direct YouTube search
+  // ── Step 2: Live fallback if no DB results ─────────────────────────────
+  let isLiveResults = false;
+  let displayData = searchData;
+
   if (totalResults === 0) {
-    // Trigger background ingestion (non-blocking)
+    console.log(`[SearchResults] No DB results for "${query}" — trying live fallback`);
+    const liveStart = performance.now();
+
+    try {
+      const { fastSearch } = await import('@/services/search/fast');
+      const liveSearchData = await fastSearch({ q: seededTopic?.name ?? query });
+
+      if (liveSearchData.totalResults > 0) {
+        displayData = liveSearchData;
+        isLiveResults = true;
+        console.log(`[SearchResults] Live fallback returned ${liveSearchData.totalResults} results in ${Math.round(performance.now() - liveStart)}ms`);
+      } else {
+        console.log(`[SearchResults] Live fallback also returned 0 results in ${Math.round(performance.now() - liveStart)}ms`);
+      }
+    } catch (e) {
+      console.error('[SearchResults] Live fallback failed:', e);
+    }
+
+    // Trigger background ingestion regardless (non-blocking)
     void triggerIngestion(query);
 
-    return <ColdStartState query={query} />;
+    // If still no results after live fallback, show cold start
+    if (!isLiveResults) {
+      return <ColdStartState query={query} />;
+    }
   }
 
-  const displayData = searchData;
   const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
+  const displayTotalResults = displayData.totalResults;
 
   // Classify intent to determine section order
   const { categoryOrder } = classifyIntent(query);
 
   // Generate AI overview (only for DB results, not live)
   let aiOverview = null;
-  if (totalResults > 0 && !seededTopic) {
+  if (!isLiveResults && totalResults > 0 && !seededTopic) {
     try {
       const allContent = [
         ...courses.map((c) => ({ title: c.title, description: null, contentType: 'course' })),
@@ -113,6 +162,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
     }
   }
 
+  console.log(`[SearchResults] Total render pipeline for "${query}": ${Math.round(performance.now() - totalStart)}ms (live=${isLiveResults})`);
 
   return (
     <div>
@@ -126,10 +176,16 @@ export async function SearchResults({ query }: SearchResultsProps) {
           <span className="gradient-text">&ldquo;{query}&rdquo;</span>
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {`${totalResults} items across ${categoryOrder.filter((cat) => {
-            const map = { courses, videos, podcasts, shorts, creators };
+          {isLiveResults && (
+            <span className="inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs"
+              style={{ background: 'rgba(var(--brand-rgb), 0.1)', color: 'var(--brand-primary)' }}>
+              ⚡ Live results
+            </span>
+          )}
+          {`${displayTotalResults} items across ${categoryOrder.filter((cat) => {
+            const map = { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators };
             return (map[cat]?.length ?? 0) > 0;
-          }).length}`}
+          }).length} categories`}
         </p>
       </div>
 
@@ -139,7 +195,7 @@ export async function SearchResults({ query }: SearchResultsProps) {
       )}
 
       {/*
-       * Render categories in CANONICAL SPEC ORDER (Issue 3):
+       * Render categories in CANONICAL SPEC ORDER:
        *   1. Courses       — shown if 1+ exists
        *   2. Podcasts      — shown ONLY if 1+ exists; omitted entirely otherwise
        *   3. Videos        — shown if 1+ exists
@@ -261,7 +317,11 @@ export async function SearchResults({ query }: SearchResultsProps) {
   );
 }
 
-function DBErrorState() {
+/**
+ * Shown when the database is completely unreachable (connection refused,
+ * timeout, pool exhausted, etc.). This is an ops/infrastructure issue.
+ */
+function DBUnreachableState() {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div
@@ -275,11 +335,39 @@ function DBErrorState() {
         </svg>
       </div>
       <h2 className="font-bold text-xl mb-2" style={{ color: 'var(--text-primary)' }}>
-        Something went wrong
+        Service temporarily unavailable
       </h2>
       <p style={{ color: 'var(--text-secondary)', maxWidth: 360 }}>
-        We couldn&apos;t fetch results right now. This might be a database configuration issue — please ensure your <code style={{ background: 'var(--bg-elevated)', padding: '1px 6px', borderRadius: 4 }}>DATABASE_URL</code> is set correctly.
+        We&apos;re having trouble connecting to our database. This is a temporary infrastructure issue — please try again in a few moments.
       </p>
     </div>
   );
 }
+
+/**
+ * Shown when the database IS reachable but a specific query failed
+ * (bad SQL, unexpected schema, etc.). Different from a connection issue.
+ */
+function DBQueryErrorState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div
+        className="flex items-center justify-center rounded-2xl mb-6"
+        style={{ width: 72, height: 72, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)' }}
+      >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.5">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      </div>
+      <h2 className="font-bold text-xl mb-2" style={{ color: 'var(--text-primary)' }}>
+        Something went wrong
+      </h2>
+      <p style={{ color: 'var(--text-secondary)', maxWidth: 360 }}>
+        We encountered an error while searching. Our team has been notified. Please try a different search or come back shortly.
+      </p>
+    </div>
+  );
+}
+

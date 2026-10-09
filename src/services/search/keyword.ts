@@ -78,6 +78,24 @@ export async function keywordSearch(
     .join(' & ');
 
   // ── Search videos by full-text ────────────────────────────────────────────
+  const videoWhereClause = topicSlug
+    ? sql`(v.search_vector @@ to_tsquery('english', ${tsQuery}) OR EXISTS (
+        SELECT 1
+        FROM video_topics vt
+        JOIN topics t ON t.id = vt.topic_id
+        WHERE vt.video_id = v.id AND t.slug = ${topicSlug}
+      ))`
+    : sql`v.search_vector @@ to_tsquery('english', ${tsQuery})`;
+
+  const videoOrderClause = topicSlug
+    ? sql`COALESCE((
+        SELECT MAX(vt.relevance_score)
+        FROM video_topics vt
+        JOIN topics t ON t.id = vt.topic_id
+        WHERE vt.video_id = v.id AND t.slug = ${topicSlug}
+      ), 0) DESC, rank DESC, v.view_count DESC NULLS LAST`
+    : sql`rank DESC, v.view_count DESC NULLS LAST`;
+
   const videoRows = await db.execute(sql`
     SELECT
       v.id,
@@ -103,24 +121,8 @@ export async function keywordSearch(
       ts_rank(v.search_vector, to_tsquery('english', ${tsQuery})) AS rank
     FROM videos v
     LEFT JOIN channels c ON c.id = v.channel_id
-    WHERE (
-      ${topicSlug}::text IS NULL
-      AND v.search_vector @@ to_tsquery('english', ${tsQuery})
-    ) OR EXISTS (
-      SELECT 1
-      FROM video_topics vt
-      JOIN topics t ON t.id = vt.topic_id
-      WHERE vt.video_id = v.id AND t.slug = ${topicSlug}
-    )
-    ORDER BY
-      COALESCE((
-        SELECT MAX(vt.relevance_score)
-        FROM video_topics vt
-        JOIN topics t ON t.id = vt.topic_id
-        WHERE vt.video_id = v.id AND t.slug = ${topicSlug}
-      ), 0) DESC,
-      rank DESC,
-      v.view_count DESC NULLS LAST
+    WHERE ${videoWhereClause}
+    ORDER BY ${videoOrderClause}
     LIMIT ${Math.max(fetchLimit * 5, 250)}
   `);
 
@@ -144,6 +146,29 @@ export async function keywordSearch(
     .map(normalizeVideoRow);
 
   // ── Search courses (playlists marked is_course=true) ─────────────────────
+  const courseWhereClause = topicSlug
+    ? sql`p.is_course = true AND (
+        setweight(to_tsvector('english', coalesce(p.title, '')), 'A') @@ to_tsquery('english', ${tsQuery})
+        OR EXISTS (
+          SELECT 1
+          FROM playlist_items pi
+          JOIN video_topics vt ON vt.video_id = pi.video_id
+          JOIN topics t ON t.id = vt.topic_id
+          WHERE pi.playlist_id = p.id AND t.slug = ${topicSlug}
+        )
+      )`
+    : sql`p.is_course = true AND setweight(to_tsvector('english', coalesce(p.title, '')), 'A') @@ to_tsquery('english', ${tsQuery})`;
+
+  const courseOrderClause = topicSlug
+    ? sql`COALESCE((
+        SELECT MAX(vt.relevance_score)
+        FROM playlist_items pi
+        JOIN video_topics vt ON vt.video_id = pi.video_id
+        JOIN topics t ON t.id = vt.topic_id
+        WHERE pi.playlist_id = p.id AND t.slug = ${topicSlug}
+      ), 0) DESC, rank DESC, p.video_count DESC NULLS LAST`
+    : sql`rank DESC, p.video_count DESC NULLS LAST`;
+
   const courseRows = await db.execute(sql`
     SELECT
       p.id,
@@ -166,30 +191,8 @@ export async function keywordSearch(
       ) AS rank
     FROM playlists p
     LEFT JOIN channels c ON c.id = p.channel_id
-    WHERE p.is_course = true
-      AND (
-        (
-          ${topicSlug}::text IS NULL
-          AND setweight(to_tsvector('english', coalesce(p.title, '')), 'A') @@ to_tsquery('english', ${tsQuery})
-        )
-        OR EXISTS (
-          SELECT 1
-          FROM playlist_items pi
-          JOIN video_topics vt ON vt.video_id = pi.video_id
-          JOIN topics t ON t.id = vt.topic_id
-          WHERE pi.playlist_id = p.id AND t.slug = ${topicSlug}
-        )
-      )
-    ORDER BY
-      COALESCE((
-        SELECT MAX(vt.relevance_score)
-        FROM playlist_items pi
-        JOIN video_topics vt ON vt.video_id = pi.video_id
-        JOIN topics t ON t.id = vt.topic_id
-        WHERE pi.playlist_id = p.id AND t.slug = ${topicSlug}
-      ), 0) DESC,
-      rank DESC,
-      p.video_count DESC NULLS LAST
+    WHERE ${courseWhereClause}
+    ORDER BY ${courseOrderClause}
     LIMIT ${Math.max(fetchLimit, 50)}
   `);
 

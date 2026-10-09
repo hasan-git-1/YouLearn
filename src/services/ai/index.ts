@@ -9,6 +9,7 @@
  */
 
 import { GoogleGenAI, Type, Schema } from '@google/genai';
+import { matchesQueryStrictly } from '@/services/search/keyword';
 import type {
   AITopicOverview,
   AIRelevanceBlurb,
@@ -89,7 +90,8 @@ export async function generateDocumentEmbeddings(
  */
 export async function filterTopicallyRelevant(
   query: string,
-  candidates: RelevanceCandidate[]
+  candidates: RelevanceCandidate[],
+  timeoutMs = 6000
 ): Promise<Map<string, RelevanceVerdict>> {
   const rejected = new Map<string, RelevanceVerdict>(
     candidates.map((candidate) => [candidate.id, {
@@ -99,7 +101,19 @@ export async function filterTopicallyRelevant(
     }])
   );
   const ai = getGeminiClient();
-  if (!ai || candidates.length === 0) return rejected;
+  if (!ai || candidates.length === 0) {
+    if (!ai) {
+      for (const candidate of candidates) {
+        const isMatch = matchesQueryStrictly(query, candidate.title, candidate.description);
+        rejected.set(candidate.id, {
+          isRelevant: isMatch,
+          relevanceScore: isMatch ? 0.75 : 0,
+          reason: isMatch ? 'Strict keyword match (No AI client)' : 'Keyword mismatch',
+        });
+      }
+    }
+    return rejected;
+  }
 
   const schema: Schema = {
     type: Type.ARRAY,
@@ -115,16 +129,26 @@ export async function filterTopicallyRelevant(
     },
   };
 
+  const batches: RelevanceCandidate[][] = [];
   for (let start = 0; start < candidates.length; start += 20) {
-    const batch = candidates.slice(start, start + 20);
-    const candidateText = batch.map((candidate) =>
-      `ID: ${candidate.id}\nTitle: ${candidate.title}\nDescription: ${candidate.description ?? 'N/A'}\nChannel: ${candidate.channelName ?? 'N/A'}`
-    ).join('\n\n---\n\n');
+    batches.push(candidates.slice(start, start + 20));
+  }
 
-    try {
-      const response = await ai.models.generateContent({
-        model: DEFAULT_MODEL,
-        contents: `You are filtering search results for topical relevance only.
+  // Parallelize all batches concurrently — spec: "batch candidates into a small number of calls (15-20) and run concurrently"
+  await Promise.all(
+    batches.map(async (batch) => {
+      const candidateText = batch.map((candidate) =>
+        `ID: ${candidate.id}\nTitle: ${candidate.title}\nDescription: ${candidate.description ?? 'N/A'}\nChannel: ${candidate.channelName ?? 'N/A'}`
+      ).join('\n\n---\n\n');
+
+      try {
+        const timeoutPromise = new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error(`[AI] filterTopicallyRelevant timed out after ${timeoutMs}ms`)), timeoutMs)
+        );
+
+        const apiPromise = ai.models.generateContent({
+          model: DEFAULT_MODEL,
+          contents: `You are filtering search results for topical relevance only.
 The user searched: "${query}"
 
 For each item, decide if it is SUBSTANTIVELY about this exact topic.
@@ -135,43 +159,54 @@ Do NOT mark something relevant because:
 
 Mark is_relevant false for anything off-topic, even if YouTube returned it. Be strict, not generous.
 Return one JSON object for every provided ID.\n\n${candidateText}`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: schema,
-          temperature: 0,
-        },
-      });
-
-      if (!response.text) continue;
-      const parsed = JSON.parse(response.text) as Array<{
-        item_id?: unknown;
-        is_relevant?: unknown;
-        relevance_score?: unknown;
-        reason?: unknown;
-      }>;
-      if (!Array.isArray(parsed)) continue;
-
-      const batchIds = new Set(batch.map((candidate) => candidate.id));
-      for (const item of parsed) {
-        if (typeof item.item_id !== 'string' || !batchIds.has(item.item_id)) continue;
-        if (
-          typeof item.is_relevant !== 'boolean' ||
-          typeof item.relevance_score !== 'number' ||
-          !Number.isFinite(item.relevance_score) ||
-          typeof item.reason !== 'string'
-        ) continue;
-
-        const score = Math.max(0, Math.min(1, item.relevance_score));
-        rejected.set(item.item_id, {
-          isRelevant: item.is_relevant && score >= 0.5,
-          relevanceScore: score,
-          reason: item.reason.slice(0, 240),
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: schema,
+            temperature: 0,
+          },
         });
+
+        const response = await Promise.race([apiPromise, timeoutPromise]);
+        if (!response || !response.text) return;
+
+        const parsed = JSON.parse(response.text) as Array<{
+          item_id?: unknown;
+          is_relevant?: unknown;
+          relevance_score?: unknown;
+          reason?: unknown;
+        }>;
+        if (!Array.isArray(parsed)) return;
+
+        const batchIds = new Set(batch.map((candidate) => candidate.id));
+        for (const item of parsed) {
+          if (typeof item.item_id !== 'string' || !batchIds.has(item.item_id)) continue;
+          if (
+            typeof item.is_relevant !== 'boolean' ||
+            typeof item.relevance_score !== 'number' ||
+            !Number.isFinite(item.relevance_score) ||
+            typeof item.reason !== 'string'
+          ) continue;
+
+          const score = Math.max(0, Math.min(1, item.relevance_score));
+          rejected.set(item.item_id, {
+            isRelevant: item.is_relevant && score >= 0.5,
+            relevanceScore: score,
+            reason: item.reason.slice(0, 240),
+          });
+        }
+      } catch (error) {
+        console.warn('[AI] filterTopicallyRelevant batch error or timeout — applying strict keyword fallback:', error);
+        for (const candidate of batch) {
+          const isMatch = matchesQueryStrictly(query, candidate.title, candidate.description);
+          rejected.set(candidate.id, {
+            isRelevant: isMatch,
+            relevanceScore: isMatch ? 0.75 : 0,
+            reason: isMatch ? 'Strict keyword match (Gemini fallback)' : 'Keyword mismatch',
+          });
+        }
       }
-    } catch (error) {
-      console.error('[AI] filterTopicallyRelevant error:', error);
-    }
-  }
+    })
+  );
 
   return rejected;
 }
