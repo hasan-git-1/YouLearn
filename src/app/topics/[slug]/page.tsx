@@ -15,6 +15,7 @@ import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
 import type { AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
 import { getTopicBySlug } from '@/config/topics';
 import { TopicUniverse } from '@/components/topics/TopicUniverse';
+import { Reveal } from '@/lib/motion';
 
 type TopicSearchData = SearchResultCategories & { totalResults: number };
 
@@ -243,10 +244,11 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   return (
     <div style={{ minHeight: '100dvh' }}>
       {/* Topic hero */}
-      <section
-        className="px-4 py-16 bg-grid bg-radial-glow"
-        style={{ borderBottom: '1px solid var(--border-subtle)' }}
-      >
+      <Reveal>
+        <section
+          className="px-4 py-16 bg-grid bg-radial-glow"
+          style={{ borderBottom: '1px solid var(--border-subtle)' }}
+        >
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div className="flex items-center gap-2 mb-4">
             <Hash size={14} style={{ color: 'var(--text-muted)' }} />
@@ -285,23 +287,28 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
             </div>
           )}
         </div>
-      </section>
+        </section>
+      </Reveal>
 
       {/* Content */}
       <div className="px-4 py-10" style={{ maxWidth: 1280, margin: '0 auto' }}>
         <div>
           {/* AI Topic Overview (only for DB results) */}
           {(aiOverview ?? fallbackOverview) && (
-            <AIOverviewCard topicName={topic.name} overview={aiOverview ?? fallbackOverview} />
+            <Reveal>
+              <AIOverviewCard topicName={topic.name} overview={aiOverview ?? fallbackOverview} />
+            </Reveal>
           )}
 
           {/* AI Learning Path (only for DB results) */}
           {aiLearningPath && (
-            <AILearningPathView
-              learningPath={aiLearningPath}
-              videosById={videosById}
-              coursesById={coursesById}
-            />
+            <Reveal>
+              <AILearningPathView
+                learningPath={aiLearningPath}
+                videosById={videosById}
+                coursesById={coursesById}
+              />
+            </Reveal>
           )}
 
           {/* Content Categories — canonical spec order: Courses → Podcasts → Videos → Shorts → Creators

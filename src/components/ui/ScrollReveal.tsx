@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { useMotionPreferences } from '@/lib/motion';
 
 interface ScrollRevealProps {
   children: React.ReactNode;
@@ -20,17 +21,13 @@ interface ScrollRevealProps {
 
 export function ScrollReveal({ children, className }: ScrollRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const { reducedMotion } = useMotionPreferences();
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    // Check for reduced motion preference — skip animation entirely
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
+    if (reducedMotion) {
       // Make visible immediately, no animation
       el.style.opacity = '1';
       el.style.transform = 'none';
@@ -59,7 +56,7 @@ export function ScrollReveal({ children, className }: ScrollRevealProps) {
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div ref={ref} className={className}>

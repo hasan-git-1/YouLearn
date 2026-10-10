@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { Magnetic } from '@/lib/motion';
 import {
   GraduationCap,
   ChevronLeft,
@@ -169,18 +171,23 @@ export function CourseDetailClient({ playlist, channel, items }: CourseDetailCli
                 {/* Actions */}
                 <div className="space-y-2 pt-2">
                   {firstUncompleted && (
-                    <Link
-                      href={`/videos/${firstUncompleted.videoId}`}
-                      className="btn-primary w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
-                      style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
-                    >
-                      <Play size={13} fill="white" />
-                      <span>{completedCount === 0 ? 'Start Course' : 'Continue Learning'}</span>
-                    </Link>
+                    <Magnetic className="block">
+                      <Link
+                        href={`/videos/${firstUncompleted.videoId}`}
+                        className="btn-primary w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2"
+                        style={{ boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)' }}
+                      >
+                        <Play size={13} fill="white" />
+                        <span>{completedCount === 0 ? 'Start Course' : 'Continue Learning'}</span>
+                      </Link>
+                    </Magnetic>
                   )}
 
-                  <button
+                  <motion.button
                     onClick={() => toggleSaved(playlist.id, 'playlist')}
+                    whileTap={{ scale: 0.95 }}
+                    animate={{ scale: saved ? [1, 1.12, 0.98, 1] : 1 }}
+                    transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                     className={cn(
                       'w-full py-2 px-3 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer',
                       saved
@@ -190,7 +197,7 @@ export function CourseDetailClient({ playlist, channel, items }: CourseDetailCli
                   >
                     <Bookmark size={14} className={saved ? 'text-indigo-400 fill-indigo-400' : 'text-gray-400'} />
                     <span>{saved ? 'Saved in Library' : 'Save Course'}</span>
-                  </button>
+                  </motion.button>
 
                   <a
                     href={ytUrl}

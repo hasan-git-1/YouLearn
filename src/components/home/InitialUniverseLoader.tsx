@@ -3,17 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen } from 'lucide-react';
+import { useReducedMotionPreference } from '@/lib/motion';
 
 export function InitialUniverseLoader() {
   const [visible, setVisible] = useState(false);
   const [phase, setPhase] = useState<'node' | 'network' | 'logo' | 'complete'>('node');
+  const prefersReducedMotion = useReducedMotionPreference();
 
   useEffect(() => {
-    // Check if user has already loaded this session or prefers reduced motion
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
     if (prefersReducedMotion || sessionStorage.getItem('tubiq_loader_shown')) {
       return;
     }
@@ -37,7 +34,7 @@ export function InitialUniverseLoader() {
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <AnimatePresence>

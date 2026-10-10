@@ -1,8 +1,10 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Children, type ReactNode, useState } from 'react';
+import { Reveal, StaggerGrid } from '@/lib/motion';
 
 interface CategorySectionProps {
   id: string;
@@ -32,7 +34,8 @@ export function CategorySection({
   if (count === 0) return null;
 
   return (
-    <section id={id} className={cn('animate-fade-up', className)}>
+    <Reveal>
+      <section id={id} className={cn('animate-fade-up', className)}>
       {/* Section header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
@@ -60,18 +63,20 @@ export function CategorySection({
         </div>
 
         {count > defaultVisible && (
-          <button
+          <motion.button
             className="btn-ghost py-1.5 px-3 text-xs flex items-center gap-1"
             type="button"
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.16 }}
             onClick={() => setExpanded((value) => !value)}
           >
             {expanded ? 'Show less' : 'View more'} <ChevronRight size={13} className={expanded ? 'rotate-90' : ''} />
-          </button>
+          </motion.button>
         )}
       </div>
 
       {/* Cards grid */}
-      <div
+      <StaggerGrid
         className={cn(
           'grid gap-4',
           twoColumn
@@ -80,9 +85,12 @@ export function CategorySection({
         )}
       >
         {cards.map((child, index) => (
-          <div key={index} className={!expanded && index >= defaultVisible ? 'hidden' : undefined}>{child}</div>
+          expanded || index < defaultVisible ? (
+            <div key={index} className="h-full">{child}</div>
+          ) : null
         ))}
-      </div>
-    </section>
+      </StaggerGrid>
+      </section>
+    </Reveal>
   );
 }

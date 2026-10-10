@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   Play, Clock, Eye, ThumbsUp, Calendar, ExternalLink,
   ChevronLeft, Users, Sparkles, CheckCircle2, Bookmark
@@ -193,8 +194,11 @@ export function VideoDetailClient({ video, playlist }: VideoDetailClientProps) {
                   </button>
 
                   {/* Bookmark / Save */}
-                  <button
+                  <motion.button
                     onClick={() => toggleSaved(video.id, 'video')}
+                    whileTap={{ scale: 0.95 }}
+                    animate={{ scale: saved ? [1, 1.12, 0.98, 1] : 1 }}
+                    transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
                     className={cn(
                       'py-2 px-3 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer',
                       saved
@@ -204,7 +208,7 @@ export function VideoDetailClient({ video, playlist }: VideoDetailClientProps) {
                   >
                     <Bookmark size={14} className={saved ? 'text-indigo-400 fill-indigo-400' : 'text-gray-400'} />
                     <span>{saved ? 'Saved' : 'Save'}</span>
-                  </button>
+                  </motion.button>
 
                   <a
                     href={ytUrl}

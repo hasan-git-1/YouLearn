@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { MotionConfig } from 'framer-motion';
 import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProgressProvider } from '@/context/ProgressContext';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { RouteTransition } from '@/components/layout/RouteTransition';
+import { ScrollProgress } from '@/components/layout/ScrollProgress';
+import { MotionCursor } from '@/lib/motion';
 
 // Loaded via next/font — avoids the Tailwind v4 @import ordering issue
 const inter = Inter({
@@ -55,15 +59,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`}>
+    <html lang="en" className={`${inter.variable} ${plusJakarta.variable}`} data-scroll-behavior="smooth">
       <body>
-        <AuthProvider>
-          <ProgressProvider>
-            <Navbar />
-            <main>{children}</main>
-            <AuthModal />
-          </ProgressProvider>
-        </AuthProvider>
+        <MotionConfig reducedMotion="user">
+          <AuthProvider>
+            <ProgressProvider>
+              <Navbar />
+              <main>
+                <RouteTransition>{children}</RouteTransition>
+              </main>
+              <AuthModal />
+              <ScrollProgress />
+              <MotionCursor />
+            </ProgressProvider>
+          </AuthProvider>
+        </MotionConfig>
       </body>
     </html>
   );

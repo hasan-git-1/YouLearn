@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { GraduationCap, Clock, Video, ChevronRight } from 'lucide-react';
 import { cn, formatDuration, getDifficultyColor, formatCount } from '@/lib/utils';
+import { TiltSurface } from '@/lib/motion';
 import type { Playlist } from '@/types';
 
 interface CourseCardProps {
@@ -28,14 +29,15 @@ export function CourseCard({ course, className }: CourseCardProps) {
   ];
 
   return (
-    <Link
-      href={`/courses/${course.id}`}
-      className={cn('glass-card group flex flex-col overflow-hidden', className)}
-      style={{ textDecoration: 'none' }}
-    >
+    <TiltSurface className="h-full">
+      <Link
+        href={`/courses/${course.id}`}
+        className={cn('glass-card group flex h-full flex-col overflow-hidden', className)}
+        style={{ textDecoration: 'none' }}
+      >
       {/* Header banner */}
       <div
-        className="relative flex items-center justify-center"
+        className="tilt-surface__media relative flex items-center justify-center"
         style={{ height: 100, background: gradients[gradientIndex] }}
       >
         <div
@@ -118,7 +120,8 @@ export function CourseCard({ course, className }: CourseCardProps) {
         <span>Start learning</span>
         <ChevronRight size={14} className="transition-transform group-hover:translate-x-1" />
       </div>
-    </Link>
+      </Link>
+    </TiltSurface>
   );
 }
 

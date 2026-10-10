@@ -3,8 +3,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, ArrowRight } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { TOPICS } from '@/config/topics';
+import { useMagneticMotion } from '@/lib/motion';
 
 const POPULAR_SUGGESTIONS = TOPICS.map((topic) => topic.name);
 
@@ -29,8 +32,10 @@ export function SearchBar({
   const [query, setQuery] = useState(initialValue);
   const [focused, setFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const submitMotion = useMagneticMotion<HTMLButtonElement>();
 
   useEffect(() => {
     if (autofocus) {
@@ -54,6 +59,7 @@ export function SearchBar({
       e.preventDefault();
       const q = query.trim();
       if (q.length < 2) return;
+      setIsSearching(true);
       setShowSuggestions(false);
       if (onSearch) {
         onSearch(q);
@@ -67,6 +73,7 @@ export function SearchBar({
   const handleSuggestion = useCallback(
     (suggestion: string) => {
       setQuery(suggestion);
+      setIsSearching(true);
       setShowSuggestions(false);
       if (onSearch) {
         onSearch(suggestion);
@@ -117,6 +124,7 @@ export function SearchBar({
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
+              setIsSearching(false);
               setShowSuggestions(true);
             }}
             onFocus={() => {
@@ -161,11 +169,17 @@ export function SearchBar({
           )}
 
           {/* Submit button */}
-          <button
+          <motion.button
+            {...submitMotion}
             type="submit"
             id="search-submit-btn"
+            aria-label={isSearching ? 'Searching' : 'Submit Search'}
+            aria-busy={isSearching}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             className="absolute flex items-center justify-center rounded-xl transition-all"
             style={{
+              ...submitMotion.style,
               right: isHero ? 12 : 8,
               width: isHero ? 44 : 32,
               height: isHero ? 44 : 32,
@@ -174,8 +188,8 @@ export function SearchBar({
               boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
             }}
           >
-            <ArrowRight size={isHero ? 18 : 14} strokeWidth={2.5} />
-          </button>
+            {isSearching ? <LoaderCircle size={isHero ? 18 : 14} className="animate-spin" /> : <ArrowRight size={isHero ? 18 : 14} strokeWidth={2.5} />}
+          </motion.button>
         </div>
       </form>
 

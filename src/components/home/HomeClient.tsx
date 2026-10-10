@@ -1,6 +1,7 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { useRef } from 'react';
 import { KnowledgeUniverseCanvas } from './KnowledgeUniverseCanvas';
 import { KnowledgeCore3D } from './KnowledgeCore3D';
 import { HeroHeadline } from './HeroHeadline';
@@ -11,6 +12,7 @@ import { InteractiveProductSimulation } from './InteractiveProductSimulation';
 import { DiscoveryBento } from './DiscoveryBento';
 import { KnowledgeArchitecture } from './KnowledgeArchitecture';
 import { UniverseCTA } from './UniverseCTA';
+import { CursorSpotlight, Reveal, useReducedMotionPreference } from '@/lib/motion';
 
 interface HomeClientProps {
   allTopics: { id: string; name: string; slug: string }[];
@@ -53,12 +55,15 @@ const starTrails = [
 ];
 
 export function HomeClient({ allTopics }: HomeClientProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const backgroundY = useTransform(scrollYProgress, [0, 1], reduceMotion ? [0, 0] : [0, 72]);
 
   return (
     <div className="min-h-screen overflow-hidden bg-[#120c0a] text-white">
-      <section className="relative isolate min-h-[min(860px,100svh)] overflow-hidden border-b border-[#f8c784]/10">
-        <div className="hero-ambient" aria-hidden="true">
+      <section ref={heroRef} className="relative isolate min-h-[min(860px,100svh)] overflow-hidden border-b border-[#f8c784]/10">
+        <motion.div className="hero-ambient" style={{ y: backgroundY }} aria-hidden="true">
           <div className="hero-glow hero-glow--left" />
           <div className="hero-glow hero-glow--right" />
           <div className="hero-lines" />
@@ -93,7 +98,7 @@ export function HomeClient({ allTopics }: HomeClientProps) {
             ))}
           </div>
           <div className="hero-sheen" />
-        </div>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.03 }}
@@ -107,6 +112,7 @@ export function HomeClient({ allTopics }: HomeClientProps) {
 
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_70%_80%_at_82%_22%,rgba(245,158,11,0.22),transparent_60%),radial-gradient(ellipse_48%_52%_at_30%_78%,rgba(251,146,60,0.14),transparent_72%),linear-gradient(120deg,rgba(18,12,10,0.82)_0%,rgba(18,12,10,0.55)_48%,rgba(18,12,10,0.92)_100%)]" />
         <div className="absolute inset-0 -z-10 opacity-[0.16] [background-image:linear-gradient(rgba(255,205,120,.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,205,120,.10)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />
+        <CursorSpotlight targetRef={heroRef} />
 
         <FloatingTopicSignals />
 
@@ -133,11 +139,11 @@ export function HomeClient({ allTopics }: HomeClientProps) {
 
       <div className="relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_at_top,rgba(62,74,180,0.10),transparent_68%)]" />
-        <ExploreUniverseSection />
-        <InteractiveProductSimulation />
-        <DiscoveryBento topicsList={allTopics} />
-        <KnowledgeArchitecture />
-        <div className="pb-16"><UniverseCTA /></div>
+        <Reveal><ExploreUniverseSection /></Reveal>
+        <Reveal><InteractiveProductSimulation /></Reveal>
+        <Reveal><DiscoveryBento topicsList={allTopics} /></Reveal>
+        <Reveal><KnowledgeArchitecture /></Reveal>
+        <Reveal className="pb-16"><UniverseCTA /></Reveal>
       </div>
     </div>
   );

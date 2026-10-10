@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Mail, Lock, Sparkles, AlertCircle, ArrowRight } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 
 export function AuthModal() {
@@ -11,8 +12,6 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  if (!isAuthModalOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,25 +55,37 @@ export function AuthModal() {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: 'rgba(5, 7, 15, 0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeAuthModal();
-      }}
-    >
-      <div
-        className="relative w-full max-w-md rounded-3xl p-6 sm:p-8 overflow-hidden animate-fade-up shadow-2xl"
-        style={{
-          background: 'linear-gradient(145deg, rgba(16, 20, 42, 0.96) 0%, rgba(9, 12, 26, 0.98) 100%)',
-          border: '1px solid rgba(139, 92, 246, 0.3)',
-          boxShadow: '0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(99, 102, 241, 0.25)',
-        }}
-      >
+    <AnimatePresence>
+      {isAuthModalOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          style={{
+            background: 'rgba(5, 7, 15, 0.75)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeAuthModal();
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div
+              className="relative w-full max-w-md rounded-3xl p-6 sm:p-8 overflow-hidden animate-fade-up shadow-2xl"
+              style={{
+                background: 'linear-gradient(145deg, rgba(16, 20, 42, 0.96) 0%, rgba(9, 12, 26, 0.98) 100%)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+                boxShadow: '0 24px 60px -10px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(99, 102, 241, 0.25)',
+              }}
+            >
         {/* Subtle Ambient Glow */}
         <div
           className="absolute -top-20 -right-20 w-48 h-48 rounded-full opacity-20 blur-3xl pointer-events-none"
@@ -213,7 +224,10 @@ export function AuthModal() {
             )}
           </button>
         </form>
-      </div>
-    </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

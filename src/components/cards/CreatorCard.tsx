@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Users, Video } from 'lucide-react';
 import { cn, formatCount, getYouTubeChannelUrl } from '@/lib/utils';
 import type { Channel } from '@/types';
+import { TiltSurface } from '@/lib/motion';
 
 interface CreatorCardProps {
   channel: Channel;
@@ -23,17 +24,18 @@ export function CreatorCard({ channel, className }: CreatorCardProps) {
     .join('');
 
   return (
-    <a
-      href={youtubeUrl ?? undefined}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-disabled={!youtubeUrl}
-      className={cn('glass-card group flex items-center gap-4 p-4', className)}
-      style={{ textDecoration: 'none', pointerEvents: youtubeUrl ? undefined : 'none', opacity: youtubeUrl ? undefined : 0.55 }}
-    >
+    <TiltSurface className="h-full">
+      <a
+        href={youtubeUrl ?? undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-disabled={!youtubeUrl}
+        className={cn('glass-card group flex h-full items-center gap-4 p-4', className)}
+        style={{ textDecoration: 'none', pointerEvents: youtubeUrl ? undefined : 'none', opacity: youtubeUrl ? undefined : 0.55 }}
+      >
       {/* Avatar */}
       <div
-        className="relative flex-shrink-0 rounded-full overflow-hidden"
+        className="tilt-surface__media relative flex-shrink-0 rounded-full overflow-hidden"
         style={{
           width: 56,
           height: 56,
@@ -102,7 +104,8 @@ export function CreatorCard({ channel, className }: CreatorCardProps) {
           <path d="M7 17L17 7M17 7H7M17 7v10" />
         </svg>
       </div>
-    </a>
+      </a>
+    </TiltSurface>
   );
 }
 

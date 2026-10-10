@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Play, Clock, Eye, Calendar } from 'lucide-react';
 import { cn, formatCount, formatDuration, formatRelativeDate, getDifficultyColor, getContentTypeLabel } from '@/lib/utils';
 import type { Video } from '@/types';
+import { TiltSurface } from '@/lib/motion';
 
 interface VideoCardProps {
   video: Video;
@@ -19,13 +20,14 @@ export function VideoCard({ video, className }: VideoCardProps) {
   const typeLabel = getContentTypeLabel(video.contentType);
 
   return (
-    <Link
-      href={`/videos/${video.id}`}
-      className={cn('glass-card group block overflow-hidden', className)}
-      style={{ textDecoration: 'none' }}
-    >
+    <TiltSurface className="h-full">
+      <Link
+        href={`/videos/${video.id}`}
+        className={cn('glass-card group block h-full overflow-hidden', className)}
+        style={{ textDecoration: 'none' }}
+      >
       {/* Thumbnail */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: '16/9', background: 'var(--bg-elevated)' }}>
+      <div className="tilt-surface__media relative overflow-hidden" style={{ aspectRatio: '16/9', background: 'var(--bg-elevated)' }}>
         {video.thumbnailUrl ? (
           <Image
             src={video.thumbnailUrl}
@@ -127,7 +129,8 @@ export function VideoCard({ video, className }: VideoCardProps) {
           )}
         </div>
       </div>
-    </Link>
+      </Link>
+    </TiltSurface>
   );
 }
 

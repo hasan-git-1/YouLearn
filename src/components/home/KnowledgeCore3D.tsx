@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { useReducedMotionPreference } from '@/lib/motion';
 
 interface KnowledgeCore3DProps {
   className?: string;
@@ -15,6 +16,7 @@ const orbitDefinitions = [
 
 export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const reduceMotion = useReducedMotionPreference();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -24,9 +26,9 @@ export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
     camera.position.set(0, 0, 7.1);
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
@@ -54,15 +56,13 @@ export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
     artwork.add(core);
 
     const crystal = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(0.73, 2),
-      new THREE.MeshPhysicalMaterial({
+      new THREE.IcosahedronGeometry(0.73, 1),
+      new THREE.MeshStandardMaterial({
         color: 0xffc45b,
         emissive: 0x9a3c08,
         emissiveIntensity: 0.65,
         metalness: 0.72,
         roughness: 0.2,
-        clearcoat: 1,
-        clearcoatRoughness: 0.16,
       }),
     );
     core.add(crystal);
@@ -97,7 +97,7 @@ export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
       orbits.push(orbit);
 
       const path = new THREE.Mesh(
-        new THREE.TorusGeometry(definition.radius, 0.007, 8, 180),
+        new THREE.TorusGeometry(definition.radius, 0.007, 6, 96),
         new THREE.MeshBasicMaterial({
           color: definition.color,
           transparent: true,
@@ -124,7 +124,7 @@ export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
       }
     });
 
-    const dustPositions = new Float32Array(330);
+    const dustPositions = new Float32Array(180);
     for (let index = 0; index < dustPositions.length; index += 3) {
       dustPositions[index] = (Math.random() - 0.5) * 5.8;
       dustPositions[index + 1] = (Math.random() - 0.5) * 5.8;
@@ -155,7 +155,6 @@ export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
     });
     resizeObserver.observe(container);
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let frameId: number | null = null;
     let isVisible = false;
     const render = (time: number) => {
@@ -207,7 +206,7 @@ export function KnowledgeCore3D({ className = '' }: KnowledgeCore3DProps) {
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, []);
+  }, [reduceMotion]);
 
   return <div ref={containerRef} className={`relative h-full w-full overflow-hidden ${className}`} aria-hidden="true" />;
 }

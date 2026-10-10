@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useReducedMotionPreference } from '@/lib/motion';
 
 interface Node {
   id: string;
@@ -23,8 +24,8 @@ export function KnowledgeUniverseCanvas({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const nodesRef = useRef<Node[]>([]);
-  const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
-  const isVisibleRef = useRef<boolean>(true);
+  const isVisibleRef = useRef<boolean>(false);
+  const prefersReducedMotion = useReducedMotionPreference();
 
   // Initialize exactly 10 subtle atmospheric nodes (within the strict 8–12 node specification)
   const initAtmosphericNodes = (width: number, height: number) => {
@@ -70,10 +71,6 @@ export function KnowledgeUniverseCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
     const handleResize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = canvas.parentElement?.clientWidth || window.innerWidth;
@@ -92,35 +89,9 @@ export function KnowledgeUniverseCanvas({
     handleResize();
     window.addEventListener('resize', handleResize);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-        active: true,
-      };
-    };
-
-    const handleMouseLeave = () => {
-      mouseRef.current.active = false;
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseleave', handleMouseLeave);
-
-    const observer = new IntersectionObserver(([entry]) => {
-      isVisibleRef.current = entry.isIntersecting;
-    });
-    observer.observe(canvas);
-
     let lastTime = performance.now();
 
     const render = (time: number) => {
-      if (!isVisibleRef.current) {
-        animationFrameId.current = requestAnimationFrame(render);
-        return;
-      }
-
       const dt = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
 
@@ -305,18 +276,30 @@ export function KnowledgeUniverseCanvas({
       }
     };
 
-    animationFrameId.current = requestAnimationFrame(render);
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisibleRef.current = entry.isIntersecting;
+      if (entry.isIntersecting) {
+        if (prefersReducedMotion) {
+          render(performance.now());
+        } else if (animationFrameId.current === null) {
+          animationFrameId.current = requestAnimationFrame(render);
+        }
+      } else if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+    });
+    observer.observe(canvas);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseleave', handleMouseLeave);
       observer.disconnect();
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
+      animationFrameId.current = null;
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <div

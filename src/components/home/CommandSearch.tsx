@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { LoaderCircle } from 'lucide-react';
+import { useMagneticMotion } from '@/lib/motion';
 import {
   Search,
   ArrowRight,
@@ -30,7 +32,9 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchButtonMotion = useMagneticMotion<HTMLButtonElement>();
 
   const handleInputChange = (val: string) => {
     setQuery(val);
@@ -41,6 +45,7 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
     (searchVal?: string) => {
       const target = (searchVal ?? query).trim();
       if (target.length >= 2) {
+        setIsSearching(true);
         router.push(`/search?q=${encodeURIComponent(target)}`);
       }
     },
@@ -123,7 +128,10 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => handleInputChange(e.target.value)}
+            onChange={(e) => {
+              setIsSearching(false);
+              handleInputChange(e.target.value);
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
@@ -142,18 +150,25 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
 
           {/* Right: Circular Action Button */}
           <motion.button
+            {...searchButtonMotion}
             type="submit"
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
             aria-label="Submit Search"
+            aria-busy={isSearching}
             className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0 text-[#1a120d] cursor-pointer relative overflow-hidden transition-all duration-200"
             style={{
+              ...searchButtonMotion.style,
               background: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 52%, #fbbf24 100%)',
               boxShadow: '0 0 16px rgba(245, 158, 11, 0.45)',
               border: '1px solid rgba(255, 229, 168, 0.25)',
             }}
           >
-            <ArrowRight size={16} className="text-white group-hover:translate-x-0.5 transition-transform" />
+            {isSearching ? (
+              <LoaderCircle size={16} className="animate-spin text-white" />
+            ) : (
+              <ArrowRight size={16} className="text-white group-hover:translate-x-0.5 transition-transform" />
+            )}
           </motion.button>
         </motion.div>
       </motion.form>

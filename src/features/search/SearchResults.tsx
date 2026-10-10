@@ -26,6 +26,7 @@ import { checkDbConnection, DatabaseConnectionError } from '@/db';
 import type { AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
 import { matchTopic } from '@/config/topics';
 import { TopicUniverse } from '@/components/topics/TopicUniverse';
+import { Reveal } from '@/lib/motion';
 
 // Fire-and-forget ingestion trigger for cold-start — server-side
 async function triggerIngestion(query: string) {
@@ -228,7 +229,9 @@ export async function SearchResults({ query }: SearchResultsProps) {
 
       {/* AI Topic Overview */}
       {(aiOverview ?? fallbackOverview) && (
-        <AIOverviewCard topicName={seededTopic.name} overview={aiOverview ?? fallbackOverview} />
+        <Reveal>
+          <AIOverviewCard topicName={seededTopic.name} overview={aiOverview ?? fallbackOverview} />
+        </Reveal>
       )}
 
       {/*
