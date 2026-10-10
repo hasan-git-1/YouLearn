@@ -75,6 +75,182 @@ body {
   overflow-x: hidden;
 }
 
+@keyframes floatStar {
+  0% {
+    opacity: 0.1;
+    transform: translate3d(0, 10px, 0) scale(0.9);
+  }
+  25% {
+    opacity: 1;
+    transform: translate3d(6px, -8px, 0) scale(1.15);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate3d(-4px, -16px, 0) scale(1);
+  }
+  100% {
+    opacity: 0.1;
+    transform: translate3d(0, 18px, 0) scale(0.9);
+  }
+}
+
+@keyframes driftTrail {
+  0% {
+    opacity: 0;
+    translate: -8vw 5vh;
+  }
+  12% {
+    opacity: 0.96;
+  }
+  48% {
+    opacity: 0.72;
+  }
+  74% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    translate: 30vw -18vh;
+  }
+}
+
+@keyframes ambientSweep {
+  0% {
+    transform: translate3d(-10%, 0, 0) scaleX(0.94);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.58;
+  }
+  50% {
+    transform: translate3d(30%, 0, 0) scaleX(1.08);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(58%, 0, 0) scaleX(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes slowPulse {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.82;
+    transform: scale(1.03);
+  }
+}
+
+.hero-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 15%, rgba(251, 191, 36, 0.16), transparent 20%),
+    radial-gradient(circle at 80% 24%, rgba(249, 115, 22, 0.18), transparent 26%),
+    linear-gradient(180deg, rgba(10, 5, 3, 0.28), rgba(18, 12, 10, 0.12) 32%, rgba(18, 12, 10, 0.68) 100%);
+}
+
+.hero-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.55;
+  animation: slowPulse 8s ease-in-out infinite;
+}
+
+.hero-glow--left {
+  width: 34rem;
+  height: 34rem;
+  left: -7rem;
+  top: -6rem;
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.hero-glow--right {
+  width: 30rem;
+  height: 30rem;
+  right: -4rem;
+  top: 2rem;
+  background: rgba(251, 146, 60, 0.18);
+  animation-delay: 1.5s;
+}
+
+.hero-lines {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(to right, rgba(255, 210, 124, 0.08), rgba(255, 210, 124, 0.08)),
+    linear-gradient(to bottom, rgba(255, 210, 124, 0.06), transparent 70%);
+  background-size: 100% 100%, 90px 90px;
+  mask-image: radial-gradient(circle at center, black 48%, transparent 100%);
+}
+
+.hero-stars {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-star {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(255, 210, 124, 0.9));
+  box-shadow: 0 0 12px rgba(255, 210, 124, 0.8), 0 0 28px rgba(255, 170, 70, 0.55);
+  animation: floatStar 6.5s ease-in-out infinite;
+}
+
+.hero-star-trail {
+  position: absolute;
+  display: block;
+  height: 1.5px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 203, 93, 0.46) 18%, rgba(255, 229, 157, 0.98) 82%, #fff8dc);
+  box-shadow: 0 0 9px rgba(255, 211, 128, 0.95), 0 0 26px rgba(255, 153, 43, 0.66);
+  transform-origin: left center;
+  animation: driftTrail 16s linear infinite;
+}
+
+.hero-star-trail::after {
+  position: absolute;
+  top: -1.5px;
+  right: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff8dc;
+  box-shadow: 0 0 8px 2px rgba(255, 221, 153, 0.9);
+  content: '';
+}
+
+.hero-sheen {
+  position: absolute;
+  inset: -20% -12% auto auto;
+  width: 52%;
+  height: 120%;
+  background: linear-gradient(90deg, transparent, rgba(255, 226, 163, 0.18), transparent);
+  transform: skewX(-18deg);
+  opacity: 0.7;
+  filter: blur(24px);
+  animation: ambientSweep 11s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-star,
+  .hero-star-trail,
+  .hero-glow,
+  .hero-sheen {
+    animation: none;
+  }
+
+  .hero-star { opacity: 0.55 !important; }
+  .hero-star-trail { opacity: 0.35; }
+}
+
 /* ─── Scrollbar styling ──────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }

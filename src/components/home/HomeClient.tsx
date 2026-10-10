@@ -16,12 +16,85 @@ interface HomeClientProps {
   allTopics: { id: string; name: string; slug: string }[];
 }
 
+const starPositions = [
+  { left: '8%', top: '16%', size: 2.2, opacity: 0.72, delay: 0 },
+  { left: '18%', top: '30%', size: 3.4, opacity: 0.96, delay: 1.7 },
+  { left: '27%', top: '18%', size: 2.1, opacity: 0.7, delay: 0.8 },
+  { left: '36%', top: '9%', size: 3.8, opacity: 1, delay: 2.3 },
+  { left: '41%', top: '24%', size: 2.4, opacity: 0.8, delay: 1.1 },
+  { left: '49%', top: '12%', size: 2.9, opacity: 1, delay: 2.7 },
+  { left: '58%', top: '28%', size: 3.1, opacity: 0.9, delay: 0.4 },
+  { left: '64%', top: '16%', size: 2.1, opacity: 0.75, delay: 1.9 },
+  { left: '72%', top: '11%', size: 4.1, opacity: 1, delay: 3.1 },
+  { left: '79%', top: '25%', size: 2.5, opacity: 0.88, delay: 2.1 },
+  { left: '88%', top: '18%', size: 2.8, opacity: 0.82, delay: 0.9 },
+  { left: '94%', top: '32%', size: 2.9, opacity: 0.9, delay: 1.4 },
+  { left: '12%', top: '52%', size: 2.6, opacity: 0.77, delay: 2.4 },
+  { left: '23%', top: '61%', size: 3.2, opacity: 0.9, delay: 1.6 },
+  { left: '34%', top: '48%', size: 2.3, opacity: 0.72, delay: 3.5 },
+  { left: '45%', top: '70%', size: 4.3, opacity: 1, delay: 0.5 },
+  { left: '55%', top: '58%', size: 2.2, opacity: 0.7, delay: 2.8 },
+  { left: '66%', top: '72%', size: 3.1, opacity: 0.86, delay: 1.2 },
+  { left: '78%', top: '64%', size: 2.5, opacity: 0.8, delay: 2.9 },
+  { left: '90%', top: '52%', size: 2.7, opacity: 0.9, delay: 0.7 },
+  { left: '84%', top: '79%', size: 2.1, opacity: 0.76, delay: 3.6 },
+  { left: '58%', top: '82%', size: 1.7, opacity: 0.68, delay: 2.5 },
+  { left: '28%', top: '82%', size: 2.2, opacity: 0.74, delay: 1.8 },
+  { left: '12%', top: '74%', size: 1.6, opacity: 0.64, delay: 4.2 },
+];
+
+const starTrails = [
+  { left: '6%', top: '34%', length: 142, angle: -28, duration: 9, delay: 0 },
+  { left: '31%', top: '13%', length: 96, angle: -34, duration: 12, delay: 2 },
+  { left: '54%', top: '38%', length: 176, angle: -25, duration: 13, delay: 5 },
+  { left: '76%', top: '8%', length: 122, angle: -32, duration: 10, delay: 1 },
+  { left: '88%', top: '58%', length: 158, angle: -29, duration: 12, delay: 7 },
+  { left: '17%', top: '69%', length: 88, angle: -36, duration: 14, delay: 4 },
+];
+
 export function HomeClient({ allTopics }: HomeClientProps) {
   const reduceMotion = useReducedMotion();
 
   return (
     <div className="min-h-screen overflow-hidden bg-[#120c0a] text-white">
       <section className="relative isolate min-h-[min(860px,100svh)] overflow-hidden border-b border-[#f8c784]/10">
+        <div className="hero-ambient" aria-hidden="true">
+          <div className="hero-glow hero-glow--left" />
+          <div className="hero-glow hero-glow--right" />
+          <div className="hero-lines" />
+          <div className="hero-stars">
+            {starPositions.map((star, index) => (
+              <span
+                key={`${star.left}-${star.top}-${index}`}
+                className="hero-star"
+                style={{
+                  left: star.left,
+                  top: star.top,
+                  width: `${star.size}px`,
+                  height: `${star.size}px`,
+                  opacity: star.opacity,
+                  animationDelay: `${star.delay}s`,
+                }}
+              />
+            ))}
+            {starTrails.map((trail, index) => (
+              <span
+                key={`trail-${index}`}
+                className="hero-star-trail"
+                style={{
+                  left: trail.left,
+                  top: trail.top,
+                  width: `${trail.length}px`,
+                  transform: `rotate(${trail.angle}deg)`,
+                  animationDuration: `${trail.duration}s`,
+                  animationDelay: `${trail.delay}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="hero-sheen" />
+        </div>
+
         <motion.div
           initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.03 }}
           animate={{ opacity: 1, scale: 1 }}
