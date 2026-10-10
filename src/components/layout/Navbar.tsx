@@ -105,12 +105,12 @@ export function Navbar() {
     <nav
       className={`sticky top-0 z-50 transition-all duration-500 ${
         isHomePage && !scrolled
-          ? 'border-b border-white/[0.04] bg-[#050711]/25 backdrop-blur-md'
+          ? 'border-b border-white/[0.04] bg-[#050711]/20 backdrop-blur-xl'
           : 'border-b border-white/[0.08] bg-[#060813]/85 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl'
       }`}
     >
       <div
-        className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8 lg:px-12"
+        className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-5 py-3 sm:px-8 lg:px-12"
       >
         {/* Left: Tubiq Logo + Wordmark */}
         <Link
@@ -139,17 +139,17 @@ export function Navbar() {
 
         {/* Center: destination navigation on the homepage, search on inner pages */}
         {isHomePage ? (
-          <div className="hidden rounded-full border border-white/[0.08] bg-white/[0.045] p-1 md:flex md:items-center">
+          <div className="hidden rounded-full border border-white/[0.08] bg-white/[0.04] p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-xl md:flex md:items-center">
             <Link
               href="/#explore"
-              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-all hover:bg-white/[0.07] hover:text-white"
               style={{ textDecoration: 'none' }}
             >
               Explore Topics
             </Link>
             <Link
               href="/#how-it-works"
-              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-all hover:bg-white/[0.07] hover:text-white"
               style={{ textDecoration: 'none' }}
             >
               How It Works
@@ -174,7 +174,7 @@ export function Navbar() {
             <Search size={16} />
           </button>
 
-          <Link href="/library" className="hidden rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white sm:inline-flex" style={{ textDecoration: 'none' }}>
+          <Link href="/library" className="hidden rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 transition-all hover:bg-white/[0.07] hover:text-white sm:inline-flex" style={{ textDecoration: 'none' }}>
             My Library
           </Link>
 

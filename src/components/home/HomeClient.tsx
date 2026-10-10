@@ -32,18 +32,21 @@ export function HomeClient({ allTopics }: HomeClientProps) {
           <KnowledgeUniverseCanvas />
         </motion.div>
 
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_80%_at_80%_24%,rgba(69,85,210,0.20),transparent_70%),radial-gradient(ellipse_48%_55%_at_26%_78%,rgba(117,63,198,0.14),transparent_74%),linear-gradient(118deg,rgba(4,6,13,0.6)_0%,rgba(4,6,13,0.24)_56%,rgba(4,6,13,0.65)_100%)]" />
-        <div className="absolute inset-0 -z-10 opacity-[0.14] [background-image:linear-gradient(rgba(160,174,255,.16)_1px,transparent_1px),linear-gradient(90deg,rgba(160,174,255,.16)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_bottom,black,transparent_82%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_62%_82%_at_82%_20%,rgba(82,104,255,0.18),transparent_70%),radial-gradient(ellipse_42%_52%_at_32%_72%,rgba(141,92,255,0.14),transparent_74%),linear-gradient(116deg,rgba(4,6,13,0.8)_0%,rgba(4,6,13,0.38)_52%,rgba(4,6,13,0.75)_100%)]" />
+        <div className="absolute inset-0 -z-10 opacity-[0.14] [background-image:linear-gradient(rgba(160,174,255,.14)_1px,transparent_1px),linear-gradient(90deg,rgba(160,174,255,.14)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]" />
 
         <FloatingTopicSignals />
         <div className="pointer-events-none absolute inset-0 z-10 mx-auto hidden max-w-[1600px] xl:block">
           <FloatingEcosystemCards />
         </div>
 
-        <div className="relative z-20 mx-auto flex min-h-[min(860px,100svh)] max-w-7xl items-center px-6 pb-24 pt-28 sm:px-10 lg:px-12">
-          <div className="w-full max-w-[42rem]">
+        <div className="relative z-20 mx-auto flex min-h-[min(860px,100svh)] max-w-[1500px] items-center px-6 pb-24 pt-28 sm:px-10 lg:px-12">
+          <div className="relative w-full max-w-[46rem]">
+            <div className="absolute -bottom-8 left-8 h-28 w-28 rounded-full bg-indigo-500/10 blur-3xl" aria-hidden="true" />
             <HeroHeadline />
-            <CommandSearch />
+            <div className="mt-3">
+              <CommandSearch />
+            </div>
           </div>
         </div>
 
