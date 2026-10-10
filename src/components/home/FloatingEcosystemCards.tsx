@@ -9,7 +9,7 @@ export function FloatingEcosystemCards() {
     <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-20">
       {/* ── CARD 1: Upper Left (COURSE — React 19 & Full Stack Patterns) ── */}
       <TiltWrapper
-        className="hidden lg:block absolute top-[16%] left-4 xl:left-8 2xl:left-14"
+        className="absolute top-[16%] right-[6%]"
         delay={1.05}
         enterX={-24}
         floatDuration={6.5}
@@ -50,7 +50,7 @@ export function FloatingEcosystemCards() {
 
       {/* ── CARD 2: Upper Right (ROADMAP — AI Engineering & Vector RAG) ─── */}
       <TiltWrapper
-        className="hidden lg:block absolute top-[18%] right-4 xl:right-8 2xl:right-14"
+        className="absolute top-[45%] right-[15%]"
         delay={1.1}
         enterX={24}
         floatDuration={7.0}
@@ -89,7 +89,7 @@ export function FloatingEcosystemCards() {
 
       {/* ── CARD 3: Lower Left (SYSTEM DESIGN — Distributed Architecture) ── */}
       <TiltWrapper
-        className="hidden lg:block absolute bottom-[14%] left-4 xl:left-8 2xl:left-14"
+        className="absolute bottom-[8%] right-[2%]"
         delay={1.15}
         enterX={-24}
         floatDuration={7.2}
@@ -128,7 +128,7 @@ export function FloatingEcosystemCards() {
 
       {/* ── CARD 4: Lower Right (PODCAST — Foundations of Modern AI) ───── */}
       <TiltWrapper
-        className="hidden lg:block absolute bottom-[16%] right-4 xl:right-8 2xl:right-14"
+        className="absolute top-[72%] right-[27%]"
         delay={1.2}
         enterX={24}
         floatDuration={6.8}
@@ -194,8 +194,8 @@ function TiltWrapper({
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
-    x.set(e.clientX - rect.left - rect.width / 2);
-    y.set(e.clientY - rect.top - rect.height / 2);
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
   };
 
   const handleMouseLeave = () => {

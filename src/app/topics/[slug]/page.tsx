@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { GraduationCap, Video, Mic, Zap, Users, Hash } from 'lucide-react';
 import { keywordSearch } from '@/services/search/keyword';
 import { classifyIntent } from '@/services/search/intent';
-import { generateLearningPath } from '@/services/ai';
+import { generateLearningPath, generateTopicOverview } from '@/services/ai';
 import { getSeedTopicBySlug } from '@/services/ingestion/seed-topics';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
@@ -157,20 +157,42 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
   const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
   const displayTotalResults = displayData.totalResults;
 
-  // Stable topic overview is delivered from the scope-locked catalogue, so a
-  // page view never needs a Gemini call just to render introductory guidance.
-  const aiOverview: AITopicOverview = {
+  const aiCatalog = [
+    ...displayCourses.map((course) => ({
+      title: course.title,
+      description: course.title,
+      contentType: 'course',
+    })),
+    ...displayVideos.map((video) => ({
+      title: video.title,
+      description: video.description,
+      contentType: video.contentType,
+    })),
+    ...displayPodcasts.map((podcast) => ({
+      title: podcast.title,
+      description: podcast.description,
+      contentType: podcast.contentType,
+    })),
+  ].slice(0, 15);
+
+  let aiOverview: AITopicOverview | null = null;
+  if (displayTotalResults > 0) {
+    aiOverview = await generateTopicOverview(topic.name, aiCatalog);
+  }
+
+  const fallbackOverview: AITopicOverview = {
     what_is_it: seededTopic?.description ?? topic.description ?? `Learn the core skills of ${topic.name}.`,
     what_to_learn: [...(seededTopic?.learn ?? [])],
     career_context: `Build practical ${topic.name} skills through the guides, courses, and videos below.`,
     recommended_starting_point: seededTopic?.learn[0] ?? 'Start with the fundamentals.',
     confidence_note: 'Curated from the Tubiq topic catalogue.',
   };
+
   let aiLearningPath = null;
 
-  if (!isLiveResults && totalResults > 0 && !seededTopic) {
+  if (displayTotalResults > 0) {
     const allContent = [
-      ...courses.map((c) => ({
+      ...displayCourses.map((c) => ({
         id: c.id,
         title: c.title,
         description: null,
@@ -178,7 +200,7 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
         durationSeconds: c.estimatedDurationSeconds,
         difficulty: c.difficulty,
       })),
-      ...videos.map((v) => ({
+      ...displayVideos.map((v) => ({
         id: v.id,
         title: v.title,
         description: v.description,
@@ -186,7 +208,7 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
         durationSeconds: v.durationSeconds,
         difficulty: v.difficulty,
       })),
-      ...podcasts.map((p) => ({
+      ...displayPodcasts.map((p) => ({
         id: p.id,
         title: p.title,
         description: p.description,
@@ -196,11 +218,13 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
       })),
     ];
 
-    try {
-      const pathRes = await generateLearningPath(topic.name, allContent);
-      aiLearningPath = pathRes;
-    } catch (e) {
-      console.error('[TopicPage] AI generation error:', e);
+    if (allContent.length > 0) {
+      try {
+        const pathRes = await generateLearningPath(topic.name, allContent);
+        aiLearningPath = pathRes;
+      } catch (e) {
+        console.error('[TopicPage] AI generation error:', e);
+      }
     }
   }
 
@@ -267,8 +291,8 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
       <div className="px-4 py-10" style={{ maxWidth: 1280, margin: '0 auto' }}>
         <div>
           {/* AI Topic Overview (only for DB results) */}
-          {aiOverview && (
-            <AIOverviewCard topicName={topic.name} overview={aiOverview} />
+          {(aiOverview ?? fallbackOverview) && (
+            <AIOverviewCard topicName={topic.name} overview={aiOverview ?? fallbackOverview} />
           )}
 
           {/* AI Learning Path (only for DB results) */}

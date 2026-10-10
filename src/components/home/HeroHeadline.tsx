@@ -1,66 +1,54 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
 
-export function HeroHeadline() {
-  const easeCurve = [0.16, 1, 0.3, 1] as const;
+const ease = [0.16, 1, 0.3, 1] as const;
 
+export function HeroHeadline() {
   return (
-    <div className="flex flex-col items-center text-center select-none max-w-3xl mx-auto px-4">
-      {/* ── Above Headline: Compact Product Badge ───────────────────────── */}
+    <div className="flex max-w-[40rem] flex-col items-start text-left">
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.1, ease: easeCurve }}
-        className="inline-flex items-center px-3.5 py-1 rounded-full border border-indigo-500/25 bg-[#0b0e22]/80 backdrop-blur-md text-indigo-300 text-[11px] font-mono tracking-wider mb-5 shadow-[0_0_14px_rgba(99,102,241,0.18)]"
+        initial={{ opacity: 0, y: 8, filter: 'blur(5px)' }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ duration: 0.55, delay: 0.22, ease }}
+        className="mb-6 inline-flex items-center rounded-full border border-indigo-400/20 bg-white/[0.045] px-3 py-1 text-[10px] font-medium tracking-[0.16em] text-indigo-200 shadow-[0_0_20px_rgba(99,102,241,0.12)] backdrop-blur-md"
       >
-        <span>AI-GUIDED · QUOTA-SAFE · REAL CONTENT</span>
+        AI-GUIDED · QUOTA-SAFE · REAL CONTENT
       </motion.div>
 
-      {/* ── Main Headline: Professional, Crisp, Product-First Typography ── */}
       <h1
-        className="text-center font-bold tracking-tight text-white max-w-2xl mx-auto"
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 'clamp(2rem, 3.8vw, 3.15rem)',
-          lineHeight: 1.15,
-          letterSpacing: '-0.025em',
-        }}
+        className="max-w-[38rem] font-bold tracking-[-0.055em] text-white"
+        style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(3rem, 5.25vw, 5.35rem)', lineHeight: 0.98 }}
       >
         <motion.span
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2, ease: easeCurve }}
-          className="inline"
+          initial={{ opacity: 0, y: 18, filter: 'blur(7px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.65, delay: 0.32, ease }}
+          className="block"
         >
-          Learn anything from the content that{' '}
+          Learn anything.
         </motion.span>
         <motion.span
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.32, ease: easeCurve }}
-          className="inline font-extrabold"
+          initial={{ opacity: 0, y: 18, filter: 'blur(7px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.65, delay: 0.43, ease }}
+          className="mt-1 block"
         >
-          <span
-            className="bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent"
-            style={{
-              textShadow: '0 0 35px rgba(99, 102, 241, 0.3)',
-            }}
-          >
+          <span className="block">From the content that</span>
+          <span className="block bg-gradient-to-r from-violet-300 via-indigo-300 to-sky-300 bg-clip-text text-transparent">
             actually matters.
           </span>
         </motion.span>
       </h1>
 
-      {/* ── Supporting Subtitle ─────────────────────────────────────────── */}
       <motion.p
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.45, ease: easeCurve }}
-        className="mt-4 mb-7 text-slate-300 text-sm sm:text-base max-w-lg mx-auto leading-relaxed font-normal"
+        transition={{ duration: 0.55, delay: 0.57, ease }}
+        className="mb-8 mt-6 max-w-xl text-sm font-normal leading-7 text-slate-300 sm:text-[15px]"
       >
-        Discover courses, videos, podcasts &amp; top creators for any topic — AI-organized, never fabricated, sourced from real indexed content.
+        Discover courses, videos, podcasts and top creators for any topic — AI-organized,
+        grounded in real indexed content.
       </motion.p>
     </div>
   );

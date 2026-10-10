@@ -72,7 +72,7 @@ const STAGES: {
 
 export function KnowledgeArchitecture() {
   return (
-    <section className="py-24 px-4 relative max-w-7xl mx-auto border-t border-white/5">
+    <section id="how-it-works" className="py-24 px-4 relative max-w-7xl mx-auto border-t border-white/5 scroll-mt-24">
       <div className="text-center max-w-2xl mx-auto mb-16">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-mono mb-4">
           <Network size={12} className="text-indigo-400" />

@@ -21,6 +21,7 @@ import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
 import { keywordSearch } from '@/services/search/keyword';
 import { classifyIntent } from '@/services/search/intent';
+import { generateTopicOverview } from '@/services/ai';
 import { checkDbConnection, DatabaseConnectionError } from '@/db';
 import type { AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
 import { matchTopic } from '@/config/topics';
@@ -162,8 +163,35 @@ export async function SearchResults({ query }: SearchResultsProps) {
   // Classify intent to determine section order
   const { categoryOrder } = classifyIntent(query);
 
-  // Stable topic overview: delivered for every supported topic with no per-view LLM call.
-  const aiOverview: AITopicOverview = {
+  const aiCatalog = [
+    ...displayCourses.map((course) => ({
+      title: course.title,
+      description: course.title,
+      contentType: 'course',
+    })),
+    ...displayVideos.map((video) => ({
+      title: video.title,
+      description: video.description,
+      contentType: video.contentType,
+    })),
+    ...displayPodcasts.map((podcast) => ({
+      title: podcast.title,
+      description: podcast.description,
+      contentType: podcast.contentType,
+    })),
+    ...displayShorts.map((short) => ({
+      title: short.title,
+      description: short.description,
+      contentType: short.contentType,
+    })),
+  ].slice(0, 15);
+
+  let aiOverview: AITopicOverview | null = null;
+  if (displayTotalResults > 0) {
+    aiOverview = await generateTopicOverview(seededTopic.name, aiCatalog);
+  }
+
+  const fallbackOverview: AITopicOverview = {
     what_is_it: seededTopic.description,
     what_to_learn: [...seededTopic.learn],
     career_context: `Build practical ${seededTopic.name} skills through the guides, courses, and videos below.`,
@@ -199,8 +227,8 @@ export async function SearchResults({ query }: SearchResultsProps) {
       </div>
 
       {/* AI Topic Overview */}
-      {aiOverview && (
-        <AIOverviewCard topicName={seededTopic.name} overview={aiOverview} />
+      {(aiOverview ?? fallbackOverview) && (
+        <AIOverviewCard topicName={seededTopic.name} overview={aiOverview ?? fallbackOverview} />
       )}
 
       {/*

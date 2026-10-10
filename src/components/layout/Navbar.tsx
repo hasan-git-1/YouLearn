@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useState, useCallback, useRef, useEffect, Suspense } from 'react';
-import { Search, BookOpen, Bookmark, User as UserIcon, LogOut, Sparkles } from 'lucide-react';
+import { Search, BookOpen, Bookmark, User as UserIcon, LogOut, Sparkles, Menu, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 function NavbarSearchInput() {
@@ -58,6 +58,7 @@ export function Navbar() {
 
   const [scrolled, setScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +67,14 @@ export function Navbar() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   useEffect(() => {
@@ -94,14 +103,14 @@ export function Navbar() {
 
   return (
     <nav
-      className={`sticky top-0 z-50 transition-all duration-300 ${
+      className={`sticky top-0 z-50 transition-all duration-500 ${
         isHomePage && !scrolled
-          ? 'bg-transparent border-b border-white/[0.04]'
-          : 'bg-[#060813]/85 backdrop-blur-xl border-b border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.4)]'
+          ? 'border-b border-white/[0.04] bg-[#050711]/25 backdrop-blur-md'
+          : 'border-b border-white/[0.08] bg-[#060813]/85 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl'
       }`}
     >
       <div
-        className="mx-auto flex items-center justify-between gap-6 px-6 py-3.5 max-w-7xl"
+        className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 sm:px-8 lg:px-12"
       >
         {/* Left: Tubiq Logo + Wordmark */}
         <Link
@@ -109,8 +118,8 @@ export function Navbar() {
           className="flex items-center gap-2.5 flex-shrink-0 group"
           style={{ textDecoration: 'none' }}
         >
-          <div
-            className="flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
+            <div
+              className="flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105"
             style={{
               width: 32,
               height: 32,
@@ -128,29 +137,22 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Center: Clean Navigation Links on Homepage, Search on Inner Pages */}
+        {/* Center: destination navigation on the homepage, search on inner pages */}
         {isHomePage ? (
-          <div className="hidden md:flex items-center gap-8 lg:gap-10">
+          <div className="hidden rounded-full border border-white/[0.08] bg-white/[0.045] p-1 md:flex md:items-center">
             <Link
-              href="/search"
-              className="text-xs font-medium text-gray-300 hover:text-white transition-colors"
+              href="/#explore"
+              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white"
               style={{ textDecoration: 'none' }}
             >
-              Explore
+              Explore Topics
             </Link>
             <Link
-              href="/topics"
-              className="text-xs font-medium text-gray-300 hover:text-white transition-colors"
+              href="/#how-it-works"
+              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white"
               style={{ textDecoration: 'none' }}
             >
-              Topics
-            </Link>
-            <Link
-              href="/library"
-              className="text-xs font-medium text-gray-300 hover:text-white transition-colors"
-              style={{ textDecoration: 'none' }}
-            >
-              My Library
+              How It Works
             </Link>
           </div>
         ) : (
@@ -162,15 +164,19 @@ export function Navbar() {
         )}
 
         {/* Right: Search Icon + Sign In Button */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
           {/* Search Icon Trigger */}
           <button
             onClick={handleSearchClick}
             aria-label="Search"
-            className="flex items-center justify-center w-8 h-8 rounded-full text-gray-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            className="hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-gray-400 transition-all hover:bg-white/[0.08] hover:text-white sm:flex"
           >
             <Search size={16} />
           </button>
+
+          <Link href="/library" className="hidden rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/[0.07] hover:text-white sm:inline-flex" style={{ textDecoration: 'none' }}>
+            My Library
+          </Link>
 
           {/* User Profile or Sign In Button */}
           {user ? (
@@ -237,7 +243,7 @@ export function Navbar() {
           ) : (
             <button
               onClick={openAuthModal}
-              className="py-1.5 px-4 text-xs font-semibold text-white rounded-xl flex items-center gap-1.5 cursor-pointer transition-all hover:opacity-95"
+              className="hidden cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white transition-all hover:opacity-95 sm:flex"
               style={{
                 background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
                 boxShadow: '0 0 16px rgba(99, 102, 241, 0.35)',
@@ -248,8 +254,27 @@ export function Navbar() {
               <span>Sign In</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+            aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={isMobileMenuOpen}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.045] text-white transition-colors hover:bg-white/[0.1] md:hidden"
+          >
+            {isMobileMenuOpen ? <X size={17} /> : <Menu size={18} />}
+          </button>
         </div>
       </div>
+      {isMobileMenuOpen && (
+        <div className="border-t border-white/[0.07] bg-[#080b18]/95 px-5 py-4 backdrop-blur-2xl md:hidden">
+          <div className="mx-auto flex max-w-7xl flex-col gap-1">
+            <Link href="/#explore" onClick={() => setIsMobileMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm text-gray-200 hover:bg-white/[0.06]">Explore Topics</Link>
+            <Link href="/#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm text-gray-200 hover:bg-white/[0.06]">How It Works</Link>
+            <Link href="/library" onClick={() => setIsMobileMenuOpen(false)} className="rounded-xl px-3 py-2.5 text-sm text-gray-200 hover:bg-white/[0.06]">My Library</Link>
+            {!user && <button onClick={() => { setIsMobileMenuOpen(false); openAuthModal(); }} className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-3 py-2.5 text-sm font-semibold text-white"><UserIcon size={14} /> Sign In</button>}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

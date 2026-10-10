@@ -14,12 +14,12 @@ import {
 } from 'lucide-react';
 
 const TOPIC_CHIPS: { label: string; icon: () => React.ReactNode }[] = [
-  { label: 'Node.js', icon: () => <Network size={12} className="text-indigo-400" /> },
+  { label: 'System Design', icon: () => <Network size={12} className="text-indigo-400" /> },
   { label: 'React', icon: () => <span className="text-cyan-400 text-xs leading-none">⚛</span> },
   { label: 'AI Engineering', icon: () => <Sparkles size={12} className="text-violet-400" /> },
   { label: 'Python', icon: () => <Terminal size={12} className="text-emerald-400" /> },
   { label: 'Full Stack', icon: () => <Layers size={12} className="text-cyan-400" /> },
-  { label: 'JavaScript', icon: () => <TrendingUp size={12} className="text-amber-400" /> },
+  { label: 'Stock Market', icon: () => <TrendingUp size={12} className="text-amber-400" /> },
 ];
 
 interface CommandSearchProps {
@@ -73,7 +73,7 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
   const easeCurve = [0.16, 1, 0.3, 1] as const;
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col items-center select-none px-2">
+    <div className="w-full max-w-[39rem] flex flex-col items-start">
       {/* ── Core Intelligence Command Search Interface ────────────────── */}
       <motion.form
         initial={{ opacity: 0, y: 14 }}
@@ -105,7 +105,7 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
               : '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 28px rgba(99, 102, 241, 0.24)',
           }}
           transition={{ duration: 0.2, ease: easeCurve }}
-          className="relative flex items-center px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-full border transition-colors duration-200"
+          className="relative flex items-center px-4 py-2.5 sm:px-5 sm:py-3 rounded-[1.15rem] border transition-colors duration-200"
           style={{
             background: 'rgba(9, 12, 26, 0.88)',
             backdropFilter: 'blur(28px)',
@@ -163,14 +163,14 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.7, ease: easeCurve }}
-        className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mt-4.5"
+        className="flex flex-wrap items-center justify-start gap-2 mt-4"
       >
         {TOPIC_CHIPS.map((chip) => (
           <button
             key={chip.label}
             type="button"
             onClick={() => executeSearch(chip.label)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-gray-300 border border-white/10 bg-white/[0.03] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:text-white hover:border-indigo-400/40 hover:bg-indigo-500/10 hover:shadow-[0_0_14px_rgba(99,102,241,0.2)] cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium text-gray-300 border border-white/10 bg-white/[0.03] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:text-white hover:border-indigo-400/40 hover:bg-indigo-500/10 hover:shadow-[0_0_14px_rgba(99,102,241,0.2)] cursor-pointer"
           >
             <span className="flex items-center justify-center">{chip.icon()}</span>
             <span>{chip.label}</span>

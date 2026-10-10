@@ -1,8 +1,6 @@
 'use client';
 
-import React from 'react';
-import { ChevronDown } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { KnowledgeUniverseCanvas } from './KnowledgeUniverseCanvas';
 import { HeroHeadline } from './HeroHeadline';
 import { CommandSearch } from './CommandSearch';
@@ -19,92 +17,50 @@ interface HomeClientProps {
 }
 
 export function HomeClient({ allTopics }: HomeClientProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <div className="relative min-h-screen bg-[#05070e] text-white overflow-hidden">
-      {/* ── Fixed Atmospheric Background Canvas ────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed inset-0 z-0 pointer-events-none"
-      >
-        <KnowledgeUniverseCanvas />
-      </motion.div>
-
-      {/* ── 01: HERO / TUBIQ APPLICATION ───────────────────────────────── */}
-      <section className="relative z-10 flex flex-col items-center justify-center min-h-[92vh] px-4 pt-10 pb-20 text-center">
-        {/* Soft blue-violet atmospheric glow */}
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[500px] pointer-events-none rounded-full blur-[140px] opacity-15"
-          style={{
-            background: 'radial-gradient(circle, #6366f1 0%, #06b6d4 35%, transparent 70%)',
-          }}
+    <div className="min-h-screen overflow-hidden bg-[#04060d] text-white">
+      <section className="relative isolate min-h-[min(860px,100svh)] overflow-hidden border-b border-white/[0.06]">
+        <motion.div
+          initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.03 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: reduceMotion ? 0 : 1.25, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0 -z-20"
           aria-hidden="true"
-        />
+        >
+          <KnowledgeUniverseCanvas />
+        </motion.div>
 
-        {/* Peripheral Signals (Node.js, Machine Learning, Data Science) */}
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_80%_at_80%_24%,rgba(69,85,210,0.20),transparent_70%),radial-gradient(ellipse_48%_55%_at_26%_78%,rgba(117,63,198,0.14),transparent_74%),linear-gradient(118deg,rgba(4,6,13,0.6)_0%,rgba(4,6,13,0.24)_56%,rgba(4,6,13,0.65)_100%)]" />
+        <div className="absolute inset-0 -z-10 opacity-[0.14] [background-image:linear-gradient(rgba(160,174,255,.16)_1px,transparent_1px),linear-gradient(90deg,rgba(160,174,255,.16)_1px,transparent_1px)] [background-size:72px_72px] [mask-image:linear-gradient(to_bottom,black,transparent_82%)]" />
+
         <FloatingTopicSignals />
-
-        {/* Exactly 4 Floating Content Cards */}
-        <div className="absolute inset-0 max-w-7xl mx-auto pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 z-10 mx-auto hidden max-w-[1600px] xl:block">
           <FloatingEcosystemCards />
         </div>
 
-        {/* Central Hero Column */}
-        <div className="relative z-20 max-w-3xl mx-auto flex flex-col items-center w-full">
-          {/* Headline & Subtitle */}
-          <HeroHeadline />
-
-          {/* Command Search & Topic Chips */}
-          <div className="w-full">
+        <div className="relative z-20 mx-auto flex min-h-[min(860px,100svh)] max-w-7xl items-center px-6 pb-24 pt-28 sm:px-10 lg:px-12">
+          <div className="w-full max-w-[42rem]">
+            <HeroHeadline />
             <CommandSearch />
           </div>
         </div>
 
-        {/* Celestial Scroll Indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.65 }}
-          transition={{ delay: 1.3, duration: 0.7 }}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-[10px] font-mono tracking-widest uppercase text-gray-400 pointer-events-none z-20"
-        >
-          <div className="w-4 h-6 rounded-full border border-gray-600/60 flex items-start justify-center p-1">
-            <motion.div
-              animate={{ y: [0, 5, 0] }}
-              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
-              className="w-1 h-1.5 rounded-full bg-indigo-400"
-            />
-          </div>
-          <span className="text-[10px] text-gray-400 flex items-center gap-1">
-            Scroll to explore
-          </span>
-          <ChevronDown size={12} className="text-gray-400 animate-bounce -mt-1" />
-        </motion.div>
+        <div className="absolute bottom-7 left-1/2 z-20 hidden -translate-x-1/2 items-center gap-2 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-400 sm:flex">
+          <span className="h-px w-8 bg-gradient-to-r from-transparent to-indigo-300/70" />
+          Explore Tubiq
+          <span className="h-px w-8 bg-gradient-to-l from-transparent to-indigo-300/70" />
+        </div>
       </section>
 
-      {/* ── 02: EXPLORE SECTION ────────────────────────────────────────── */}
-      <div className="relative z-10">
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_at_top,rgba(62,74,180,0.10),transparent_68%)]" />
         <ExploreUniverseSection />
-      </div>
-
-      {/* ── 03: TUBIQ SYNTHESIS / REAL KNOWLEDGE ───────────────────────── */}
-      <div className="relative z-10">
         <InteractiveProductSimulation />
-      </div>
-
-      {/* ── 04: KNOWLEDGE ECOSYSTEM / DISCOVERY ─────────────────────────── */}
-      <div className="relative z-10">
         <DiscoveryBento topicsList={allTopics} />
-      </div>
-
-      {/* ── 05: INTELLIGENT KNOWLEDGE UNIVERSE ─────────────────────────── */}
-      <div className="relative z-10">
         <KnowledgeArchitecture />
-      </div>
-
-      {/* ── Final Call to Action ────────────────────────────────────────── */}
-      <div className="relative z-10 pb-20">
-        <UniverseCTA />
+        <div className="pb-16"><UniverseCTA /></div>
       </div>
     </div>
   );
