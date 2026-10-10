@@ -90,30 +90,30 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
           animate={{
             y: isFocused ? -1.5 : 0,
             borderColor: isFocused
-              ? 'rgba(129, 140, 248, 0.75)'
-              : 'rgba(255, 255, 255, 0.12)',
+              ? 'rgba(251, 191, 36, 0.85)'
+              : 'rgba(255, 204, 128, 0.16)',
             boxShadow: isFocused
-              ? '0 16px 44px rgba(0, 0, 0, 0.75), 0 0 36px rgba(99, 102, 241, 0.38)'
-              : '0 10px 32px rgba(0, 0, 0, 0.55), 0 0 22px rgba(99, 102, 241, 0.16)',
+              ? '0 16px 44px rgba(0, 0, 0, 0.7), 0 0 34px rgba(245, 158, 11, 0.32)'
+              : '0 10px 32px rgba(0, 0, 0, 0.55), 0 0 24px rgba(245, 158, 11, 0.14)',
           }}
           whileHover={{
             borderColor: isFocused
-              ? 'rgba(129, 140, 248, 0.85)'
-              : 'rgba(99, 102, 241, 0.45)',
+              ? 'rgba(251, 191, 36, 0.92)'
+              : 'rgba(251, 191, 36, 0.4)',
             boxShadow: isFocused
-              ? '0 18px 48px rgba(0, 0, 0, 0.8), 0 0 42px rgba(99, 102, 241, 0.42)'
-              : '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 28px rgba(99, 102, 241, 0.24)',
+              ? '0 18px 48px rgba(0, 0, 0, 0.8), 0 0 38px rgba(245, 158, 11, 0.38)'
+              : '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 28px rgba(245, 158, 11, 0.2)',
           }}
           transition={{ duration: 0.2, ease: easeCurve }}
           className="relative flex items-center px-4 py-2.5 sm:px-5 sm:py-3 rounded-[1.15rem] border transition-colors duration-200"
           style={{
-            background: 'rgba(9, 12, 26, 0.88)',
+            background: 'rgba(26, 17, 12, 0.86)',
             backdropFilter: 'blur(28px)',
             WebkitBackdropFilter: 'blur(28px)',
           }}
         >
           {/* Left: Search Glyph */}
-          <div className="flex items-center justify-center text-gray-400 group-hover:text-indigo-400 transition-colors flex-shrink-0 mr-3">
+          <div className="flex items-center justify-center text-[#f1c27d] group-hover:text-[#f8d79d] transition-colors flex-shrink-0 mr-3">
             <Search size={18} />
           </div>
 
@@ -128,14 +128,14 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
             onBlur={() => setIsFocused(false)}
             onKeyDown={handleKeyDown}
             placeholder="What do you want to learn?"
-            className="w-full bg-transparent text-white placeholder-gray-400 text-sm sm:text-base outline-none font-normal tracking-tight"
+            className="w-full bg-transparent text-[#fff7ed] placeholder-[#d9a96b] text-sm sm:text-base outline-none font-normal tracking-tight"
             style={{ fontFamily: 'var(--font-sans)' }}
             autoComplete="off"
             spellCheck={false}
           />
 
           {/* Right: Keyboard Shortcut Hint */}
-          <div className="hidden sm:flex items-center gap-0.5 px-2 py-0.5 rounded-md border border-white/10 bg-white/[0.04] text-[10px] font-mono text-gray-400 mr-2 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-0.5 px-2 py-0.5 rounded-md border border-[#f8c784]/15 bg-[#f59e0b]/5 text-[10px] font-mono text-[#f5d4a6] mr-2 flex-shrink-0">
             <span>⌘</span>
             <span>K</span>
           </div>
@@ -146,11 +146,11 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
             aria-label="Submit Search"
-            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0 text-white cursor-pointer relative overflow-hidden transition-all duration-200"
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0 text-[#1a120d] cursor-pointer relative overflow-hidden transition-all duration-200"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              boxShadow: '0 0 16px rgba(99, 102, 241, 0.55)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 52%, #fbbf24 100%)',
+              boxShadow: '0 0 16px rgba(245, 158, 11, 0.45)',
+              border: '1px solid rgba(255, 229, 168, 0.25)',
             }}
           >
             <ArrowRight size={16} className="text-white group-hover:translate-x-0.5 transition-transform" />
@@ -170,7 +170,7 @@ export function CommandSearch({ onQueryChange }: CommandSearchProps) {
             key={chip.label}
             type="button"
             onClick={() => executeSearch(chip.label)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium text-gray-300 border border-white/10 bg-white/[0.03] backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:text-white hover:border-indigo-400/40 hover:bg-indigo-500/10 hover:shadow-[0_0_14px_rgba(99,102,241,0.2)] cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium text-[#f7d9b6] border border-[#f8c784]/15 bg-[#2a1b12]/55 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:text-[#fff7ed] hover:border-[#f5b84d]/45 hover:bg-[#f59e0b]/10 hover:shadow-[0_0_14px_rgba(245,158,11,0.15)] cursor-pointer"
           >
             <span className="flex items-center justify-center">{chip.icon()}</span>
             <span>{chip.label}</span>

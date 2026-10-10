@@ -4,28 +4,28 @@
 
 :root {
   /* Backgrounds */
-  --bg-base: #080b14;
-  --bg-surface: #0d1117;
-  --bg-elevated: #161b27;
-  --bg-card: #1a2035;
-  --bg-card-hover: #1f2742;
+  --bg-base: #120c0a;
+  --bg-surface: #1d120d;
+  --bg-elevated: #251a12;
+  --bg-card: #2a1b12;
+  --bg-card-hover: #342518;
 
-  /* Brand — indigo-violet gradient system */
-  --brand-primary: #6366f1;     /* indigo-500 */
-  --brand-secondary: #8b5cf6;   /* violet-500 */
-  --brand-accent: #06b6d4;      /* cyan-500 */
-  --brand-glow: rgba(99, 102, 241, 0.15);
+  /* Brand — ember / warm gold system */
+  --brand-primary: #f59e0b;     /* amber-500 */
+  --brand-secondary: #fb923c;   /* orange-400 */
+  --brand-accent: #fbbf24;      /* yellow-400 */
+  --brand-glow: rgba(245, 158, 11, 0.18);
 
   /* Text */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-  --text-inverse: #080b14;
+  --text-primary: #fff7ed;
+  --text-secondary: #f6d3a2;
+  --text-muted: #d6a774;
+  --text-inverse: #120c0a;
 
   /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 196, 132, 0.11);
+  --border-default: rgba(255, 198, 130, 0.17);
+  --border-strong: rgba(255, 196, 132, 0.22);
 
   /* Status */
   --color-success: #10b981;

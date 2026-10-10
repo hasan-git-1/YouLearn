@@ -105,8 +105,8 @@ export function Navbar() {
     <nav
       className={`sticky top-0 z-50 transition-all duration-500 ${
         isHomePage && !scrolled
-          ? 'border-b border-white/[0.04] bg-[#050711]/20 backdrop-blur-xl'
-          : 'border-b border-white/[0.08] bg-[#060813]/85 shadow-[0_4px_24px_rgba(0,0,0,0.4)] backdrop-blur-xl'
+          ? 'border-b border-[#fbbf24]/10 bg-[#120c0a]/25 backdrop-blur-xl'
+          : 'border-b border-[#fbbf24]/10 bg-[#190f0b]/88 shadow-[0_10px_30px_rgba(11,6,4,0.55)] backdrop-blur-xl'
       }`}
     >
       <div
@@ -123,14 +123,14 @@ export function Navbar() {
             style={{
               width: 32,
               height: 32,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              boxShadow: '0 0 14px rgba(99, 102, 241, 0.45)',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 52%, #fbbf24 100%)',
+              boxShadow: '0 0 18px rgba(245, 158, 11, 0.35)',
             }}
           >
-            <BookOpen size={16} color="white" strokeWidth={2.5} />
+            <BookOpen size={16} color="#1a120d" strokeWidth={2.5} />
           </div>
           <span
-            className="font-black text-lg tracking-tight text-white group-hover:text-indigo-200 transition-colors"
+            className="font-black text-lg tracking-tight text-[#fff7ed] group-hover:text-[#f8d79d] transition-colors"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             Tubiq
@@ -139,17 +139,17 @@ export function Navbar() {
 
         {/* Center: destination navigation on the homepage, search on inner pages */}
         {isHomePage ? (
-          <div className="hidden rounded-full border border-white/[0.08] bg-white/[0.04] p-1 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-xl md:flex md:items-center">
+          <div className="hidden rounded-full border border-[#f8c784]/15 bg-[#2a1b12]/55 p-1 shadow-[0_0_0_1px_rgba(255,191,110,0.08)] backdrop-blur-xl md:flex md:items-center">
             <Link
               href="/#explore"
-              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-all hover:bg-white/[0.07] hover:text-white"
+              className="rounded-full px-4 py-1.5 text-xs font-medium text-[#f7d9b6] transition-all hover:bg-[#f59e0b]/10 hover:text-[#fff7ed]"
               style={{ textDecoration: 'none' }}
             >
               Explore Topics
             </Link>
             <Link
               href="/#how-it-works"
-              className="rounded-full px-4 py-1.5 text-xs font-medium text-gray-300 transition-all hover:bg-white/[0.07] hover:text-white"
+              className="rounded-full px-4 py-1.5 text-xs font-medium text-[#f7d9b6] transition-all hover:bg-[#f59e0b]/10 hover:text-[#fff7ed]"
               style={{ textDecoration: 'none' }}
             >
               How It Works
@@ -169,12 +169,12 @@ export function Navbar() {
           <button
             onClick={handleSearchClick}
             aria-label="Search"
-            className="hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-gray-400 transition-all hover:bg-white/[0.08] hover:text-white sm:flex"
+            className="hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-[#f1c27d] transition-all hover:bg-[#f59e0b]/10 hover:text-[#fff7ed] sm:flex"
           >
             <Search size={16} />
           </button>
 
-          <Link href="/library" className="hidden rounded-full px-3 py-1.5 text-xs font-medium text-gray-300 transition-all hover:bg-white/[0.07] hover:text-white sm:inline-flex" style={{ textDecoration: 'none' }}>
+          <Link href="/library" className="hidden rounded-full px-3 py-1.5 text-xs font-medium text-[#f7d9b6] transition-all hover:bg-[#f59e0b]/10 hover:text-[#fff7ed] sm:inline-flex" style={{ textDecoration: 'none' }}>
             My Library
           </Link>
 
@@ -185,8 +185,8 @@ export function Navbar() {
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-xs text-white transition-transform hover:scale-105 cursor-pointer"
                 style={{
-                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                  boxShadow: '0 0 10px rgba(99, 102, 241, 0.4)',
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 100%)',
+                  boxShadow: '0 0 14px rgba(245, 158, 11, 0.4)',
                 }}
                 aria-label="User profile menu"
               >
