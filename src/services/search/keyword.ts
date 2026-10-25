@@ -12,9 +12,9 @@
  */
 
 import { db } from '@/db';
-import { videos, channels, playlists, videoTopics, topics } from '@/db/schema';
-import { eq, and, sql, inArray, isNotNull } from 'drizzle-orm';
-import type { SearchResultCategories, ContentType, Difficulty } from '@/types';
+import { channels } from '@/db/schema';
+import { sql, inArray } from 'drizzle-orm';
+import type { SearchResultCategories } from '@/types';
 import { validateContentType, validateDifficulty } from '@/services/classification/rules';
 import { getTopicBySlug } from '@/config/topics';
 
@@ -110,7 +110,7 @@ export async function keywordSearch(
       ), 0) DESC, rank DESC, v.view_count DESC NULLS LAST`
     : sql`rank DESC, v.view_count DESC NULLS LAST`;
 
-  const videoRows = await db.execute(sql`
+  const videoRowsPromise = db.execute(sql`
     SELECT
       v.id,
       v.youtube_video_id,
@@ -140,26 +140,6 @@ export async function keywordSearch(
     LIMIT ${Math.max(fetchLimit * 5, 250)}
   `);
 
-  const allVideoRows = ((videoRows.rows ?? []) as Array<Record<string, unknown>>)
-    .filter((row) => Boolean(topicSlug) || matchesQueryStrictly(q, row.title as string, row.description as string | null))
-    .filter((row) => passesTopicRelevance(topicSlug, row.title as string, row.description as string | null));
-
-  // ── Separate by content_type ──────────────────────────────────────────────
-  const videoResults = allVideoRows
-    .filter((r) => r.content_type === 'video' || r.content_type === 'lecture' || r.content_type === 'interview')
-    .slice(0, fetchLimit)
-    .map(normalizeVideoRow);
-
-  const podcastResults = allVideoRows
-    .filter((r) => r.content_type === 'podcast')
-    .slice(0, fetchLimit)
-    .map(normalizeVideoRow);
-
-  const shortResults = allVideoRows
-    .filter((r) => r.content_type === 'short')
-    .slice(0, fetchLimit)
-    .map(normalizeVideoRow);
-
   // ── Search courses (playlists marked is_course=true) ─────────────────────
   const courseWhereClause = topicSlug
     ? sql`p.is_course = true AND (
@@ -184,7 +164,7 @@ export async function keywordSearch(
       ), 0) DESC, rank DESC, p.video_count DESC NULLS LAST`
     : sql`rank DESC, p.video_count DESC NULLS LAST`;
 
-  const courseRows = await db.execute(sql`
+  const courseRowsPromise = db.execute(sql`
     SELECT
       p.id,
       p.youtube_playlist_id,
@@ -210,6 +190,27 @@ export async function keywordSearch(
     ORDER BY ${courseOrderClause}
     LIMIT ${Math.max(fetchLimit, 50)}
   `);
+
+  const [videoRows, courseRows] = await Promise.all([videoRowsPromise, courseRowsPromise]);
+  const allVideoRows = ((videoRows.rows ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => Boolean(topicSlug) || matchesQueryStrictly(q, row.title as string, row.description as string | null))
+    .filter((row) => passesTopicRelevance(topicSlug, row.title as string, row.description as string | null));
+
+  // ── Separate by content_type ──────────────────────────────────────────────
+  const videoResults = allVideoRows
+    .filter((r) => r.content_type === 'video' || r.content_type === 'lecture' || r.content_type === 'interview')
+    .slice(0, fetchLimit)
+    .map(normalizeVideoRow);
+
+  const podcastResults = allVideoRows
+    .filter((r) => r.content_type === 'podcast')
+    .slice(0, fetchLimit)
+    .map(normalizeVideoRow);
+
+  const shortResults = allVideoRows
+    .filter((r) => r.content_type === 'short')
+    .slice(0, fetchLimit)
+    .map(normalizeVideoRow);
 
   const courseResults = ((courseRows.rows ?? []) as Array<Record<string, unknown>>)
     .filter((row) => Boolean(topicSlug) || matchesQueryStrictly(q, row.title as string, null))

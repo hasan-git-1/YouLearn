@@ -25,14 +25,29 @@ export default function LibraryPage() {
   const [savedCourses, setSavedCourses] = useState<Playlist[]>([]);
 
   useEffect(() => {
-    fetch('/api/user/saved')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.videos)) setSavedVideos(data.videos);
-        if (Array.isArray(data.courses)) setSavedCourses(data.courses);
+    const controller = new AbortController();
+    const savedIds = Array.from(savedItemIds).slice(0, 100);
+    const query = user || savedIds.length === 0
+      ? ''
+      : `?ids=${encodeURIComponent(savedIds.join(','))}`;
+
+    fetch(`/api/user/saved${query}`, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Could not load saved content (${res.status})`);
+        return res.json();
       })
-      .catch(() => {});
-  }, [user]);
+      .then((data) => {
+        setSavedVideos(Array.isArray(data.videos) ? data.videos : []);
+        setSavedCourses(Array.isArray(data.courses) ? data.courses : []);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error('[Library] Failed to load saved content:', error);
+        }
+      });
+
+    return () => controller.abort();
+  }, [user, savedItemIds]);
 
   const totalSavedCount = savedItemIds.size;
   const totalCompletedCount = completedVideoIds.size;

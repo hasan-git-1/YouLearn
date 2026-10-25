@@ -6,7 +6,8 @@
  */
 
 import { serve } from 'inngest/next';
-import { inngest, inngestFunctions } from '@/jobs/ingestion';
+import { inngest } from '@/jobs/client';
+import { inngestFunctions } from '@/jobs/ingestion';
 
 export const { GET, POST, PUT } = serve({
   client: inngest,

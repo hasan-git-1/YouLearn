@@ -4,23 +4,13 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Compass,
-  Sparkles,
-  Award,
   BookOpen,
   ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  Layers,
   Mic,
   Database,
-  Users,
 } from 'lucide-react';
 
-interface DiscoveryBentoProps {
-  topicsList?: { id: string; name: string; slug: string }[];
-}
-
-export function DiscoveryBento({ topicsList = [] }: DiscoveryBentoProps) {
+export function DiscoveryBento() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'courses' | 'podcasts' | 'roadmaps'>('all');
 
   return (

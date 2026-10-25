@@ -52,20 +52,6 @@ function getAuthErrorMessage(error: AuthError | Error | unknown): string {
   return 'An unexpected error occurred. Please try again.';
 }
 
-// Helper to ensure user is confirmed in the database
-async function triggerAutoConfirm(email: string): Promise<boolean> {
-  try {
-    const res = await fetch('/api/auth/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -113,24 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
         });
 
-        // If email confirmation is holding it back, auto-confirm in DB and retry immediately
         if (error && error.message.includes('Email not confirmed')) {
-          await triggerAutoConfirm(cleanEmail);
-          const retry = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password,
-          });
-
-          if (retry.error) {
-            return { error: getAuthErrorMessage(retry.error) };
-          }
-
-          if (retry.data?.session) {
-            setSession(retry.data.session);
-            setUser(retry.data.user);
-            setIsAuthModalOpen(false);
-            return {};
-          }
+          return { error: 'Please confirm your email before signing in.' };
         }
 
         if (error) {
@@ -182,14 +152,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { message: 'Welcome to Tubiq!' };
         }
 
-        // Auto-confirm in database and sign in immediately with zero email confirmation required
-        await triggerAutoConfirm(cleanEmail);
         const loginRes = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password,
         });
 
         if (loginRes.error) {
+          if (loginRes.error.message.includes('Email not confirmed')) {
+            return { message: 'Check your email to confirm your account, then sign in.' };
+          }
           return { error: getAuthErrorMessage(loginRes.error) };
         }
 
@@ -200,8 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { message: 'Welcome to Tubiq!' };
         }
 
-        setIsAuthModalOpen(false);
-        return { message: 'Welcome to Tubiq!' };
+        return { message: 'Check your email to confirm your account, then sign in.' };
       } catch (e: unknown) {
         return { error: getAuthErrorMessage(e) };
       }

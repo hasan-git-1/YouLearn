@@ -240,12 +240,12 @@ export async function getPlaylistDetails(
 // ─── Fast Search Variants (non-throwing quota) ─────────────────────────────────
 // Used by fastSearch for instant results — gracefully degrades if quota exceeded
 
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T, name: string): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms: number, name: string): Promise<T | null> {
   let timer: NodeJS.Timeout;
-  const timeoutPromise = new Promise<T>((resolve) => {
+  const timeoutPromise = new Promise<null>((resolve) => {
     timer = setTimeout(() => {
-      console.warn(`[YouTube] ${name} timed out after ${ms}ms — returning fallback`);
-      resolve(fallback);
+      console.warn(`[YouTube] ${name} timed out after ${ms}ms`);
+      resolve(null);
     }, ms);
   });
   return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
@@ -278,9 +278,9 @@ export async function fastSearchContent(
         safeSearch: 'moderate',
       }),
       5000,
-      { data: { items: [] } } as any,
       'fastSearchContent'
     );
+    if (!response) return [];
 
     return (response.data.items ?? []).map((item: youtube_v3.Schema$SearchResult) => ({
       id:
@@ -338,9 +338,9 @@ export async function fastGetVideoDetails(
           id: batch,
         }),
         5000,
-        { data: { items: [] } } as any,
         'fastGetVideoDetails'
       );
+      if (!response) break;
 
       for (const item of response.data.items ?? []) {
         results.push({
@@ -405,9 +405,9 @@ export async function fastGetChannelDetails(
           id: batch,
         }),
         5000,
-        { data: { items: [] } } as any,
         'fastGetChannelDetails'
       );
+      if (!response) break;
 
       for (const item of response.data.items ?? []) {
         results.push({
@@ -464,9 +464,9 @@ export async function fastGetPlaylistDetails(
           id: batch,
         }),
         5000,
-        { data: { items: [] } } as any,
         'fastGetPlaylistDetails'
       );
+      if (!response) break;
 
       for (const item of response.data.items ?? []) {
         results.push({

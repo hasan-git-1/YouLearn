@@ -3,16 +3,44 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { db } from '@/db';
 import { users, savedContent, videos, playlists } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ savedIds: [], items: [] });
+      const requestedIds = new URL(request.url).searchParams.get('ids');
+      const ids = requestedIds
+        ? [...new Set(requestedIds.split(',').map((id) => id.trim()).filter(Boolean))]
+        : [];
+      const isUuid = (id: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+      if (ids.length > 100 || ids.some((id) => !isUuid(id))) {
+        return NextResponse.json({ error: 'Invalid saved item IDs' }, { status: 400 });
+      }
+
+      const [savedVideos, savedCourses] = ids.length > 0
+        ? await Promise.all([
+            db.query.videos.findMany({
+              where: inArray(videos.id, ids),
+              with: { channel: true },
+            }),
+            db.query.playlists.findMany({
+              where: inArray(playlists.id, ids),
+              with: { channel: true },
+            }),
+          ])
+        : [[], []];
+
+      return NextResponse.json({
+        savedIds: ids,
+        videos: savedVideos,
+        courses: savedCourses,
+      });
     }
 
     // Ensure user in Postgres
@@ -51,7 +79,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('[API user/saved GET] Error:', error);
-    return NextResponse.json({ savedIds: [], videos: [], courses: [] }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to load saved content' }, { status: 500 });
   }
 }
 

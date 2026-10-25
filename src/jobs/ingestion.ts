@@ -8,13 +8,11 @@
  * `trigger` property in the options. The handler receives { event, step }.
  */
 
-import { Inngest } from 'inngest';
+import { inngest } from './client';
 import { ingestTopic } from '@/services/ingestion/worker';
 import { SEED_TOPICS } from '@/services/ingestion/seed-topics';
 
-// ─── Inngest client ───────────────────────────────────────────────────────────
-
-export const inngest = new Inngest({ id: 'tubiq' });
+export { inngest };
 
 // ─── Ingestion job ────────────────────────────────────────────────────────────
 

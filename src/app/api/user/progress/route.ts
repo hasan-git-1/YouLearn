@@ -27,7 +27,7 @@ export async function GET() {
     return NextResponse.json({ completedIds: rows.map((r) => r.videoId) });
   } catch (error) {
     console.error('[API user/progress GET] Error:', error);
-    return NextResponse.json({ completedIds: [] }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to load progress' }, { status: 500 });
   }
 }
 

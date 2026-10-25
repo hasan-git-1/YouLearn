@@ -7,9 +7,8 @@
  *   1. Classify query intent (rule-based, instant)
  *   2. Resolve seeded topic (if applicable)
  *   3. Run keyword full-text search against Postgres
- *   4. If no results → live fallback via fastSearch (direct YouTube)
- *   5. If still nothing → cold-start: enqueue background ingestion
- *   6. Return categorized results with intent + ranked category order
+ *   4. If no results → return a cold-start response and enqueue background ingestion
+ *   5. Return categorized results with intent + ranked category order
  *
  * Error handling:
  *   - DB unreachable → 503 with "service_unavailable" error
@@ -17,17 +16,14 @@
  *   - These are DISTINCT errors, not the same generic message
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { classifyIntent } from '@/services/search/intent';
 import { keywordSearch } from '@/services/search/keyword';
-import { inngest } from '@/jobs/ingestion';
+import { inngest } from '@/jobs/client';
 import { db, checkDbConnection, DatabaseConnectionError } from '@/db';
 import { searches } from '@/db/schema';
-import { and, eq, gte, sql } from 'drizzle-orm';
 import type { SearchResponse } from '@/types';
 import { matchTopic, TOPICS } from '@/config/topics';
-
-const COLD_START_RATE_LIMIT = 3; // max cold-start triggers per user per day
 
 export async function GET(request: NextRequest) {
   const totalStart = performance.now();
@@ -35,7 +31,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q')?.trim();
-    const limit = Math.min(parseInt(searchParams.get('limit') ?? '12', 10), 50);
+    const requestedLimit = Number.parseInt(searchParams.get('limit') ?? '12', 10);
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 50)
+      : 12;
 
     const topicMatch = matchTopic(q ?? '');
     if (!topicMatch.matched) {
@@ -96,55 +95,13 @@ export async function GET(request: NextRequest) {
 
     // ── Step 4: Log search (fire-and-forget, non-blocking) ───────────────
     // We don't block the response on this
-    db.insert(searches).values({ query: searchQuery }).catch(() => {
-      // Non-critical — don't fail the request if logging fails
+    void db.insert(searches).values({ query: searchQuery }).catch((error) => {
+      console.error('[search] Failed to log search:', error);
     });
 
-    // ── Step 5: Live fallback + Cold-start handling ──────────────────────
+    // ── Step 5: Cold-start handling ──────────────────────────────────────
     if (searchResult.totalResults === 0) {
-      // Try live fallback first
-      let liveResults = null;
-      try {
-        const liveStart = performance.now();
-        const { fastSearch } = await import('@/services/search/fast');
-        liveResults = await fastSearch({ q: seededTopic.name });
-        console.log(`[search] Live fallback took ${Math.round(performance.now() - liveStart)}ms — ${liveResults.totalResults} results`);
-      } catch (e) {
-        console.error('[search] Live fallback failed:', e);
-      }
-
-      // If live fallback returned results, use them
-      if (liveResults && liveResults.totalResults > 0) {
-        const response: SearchResponse = {
-          query: searchQuery,
-          intent: intentResult.intent,
-          categoryOrder: intentResult.categoryOrder,
-          results: {
-            courses: liveResults.courses,
-            videos: liveResults.videos,
-            podcasts: liveResults.podcasts,
-            shorts: liveResults.shorts,
-            creators: liveResults.creators,
-          },
-          coldStart: false,
-          totalResults: liveResults.totalResults,
-        };
-
-        console.log(`[search] Total pipeline for "${q}": ${Math.round(performance.now() - totalStart)}ms (live fallback)`);
-
-        // Also trigger background ingestion so next search is from DB
-        void triggerBackgroundIngestion(seededTopic.name, request);
-
-        return NextResponse.json(response, {
-          headers: {
-            // Shorter cache for live results
-            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
-          },
-        });
-      }
-
-      // True cold start — no results from either path
-      await triggerBackgroundIngestion(seededTopic.name, request);
+      after(() => triggerBackgroundIngestion(seededTopic.name));
 
       const response: SearchResponse = {
         query: searchQuery,
@@ -155,7 +112,9 @@ export async function GET(request: NextRequest) {
         totalResults: 0,
       };
 
-      return NextResponse.json(response);
+      return NextResponse.json(response, {
+        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
+      });
     }
 
     // ── Step 6: Return results ───────────────────────────────────────────
@@ -195,44 +154,19 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Rate-limited background ingestion trigger. Checks if we've already
- * triggered ingestion for this query today before sending another job.
+ * Inngest applies a per-topic rate limit to deduplicate cold-start events.
  */
-async function triggerBackgroundIngestion(q: string, request: NextRequest) {
+async function triggerBackgroundIngestion(q: string) {
   try {
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      request.headers.get('x-real-ip') ??
-      'unknown';
-
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-
-    // Count cold-start triggers for this IP today
-    const [{ count }] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(searches)
-      .where(
-        and(
-          gte(searches.createdAt, todayStart),
-          eq(searches.query, q) // same query counts as 1
-        )
-      );
-
-    const canTriggerIngestion = (count ?? 0) <= COLD_START_RATE_LIMIT;
-
-    if (canTriggerIngestion) {
-      await inngest.send({
-        name: 'app/topic.ingest',
-        data: {
-          topic: q,
-          maxSearchCalls: 5,
-          skipIfRecent: false,
-        },
-      });
-
-      console.log(`[search] Cold-start ingestion triggered for: "${q}"`);
-    }
+    await inngest.send({
+      name: 'app/topic.ingest',
+      data: {
+        topic: q,
+        maxSearchCalls: 5,
+        skipIfRecent: false,
+      },
+    });
+    console.log(`[search] Cold-start ingestion queued for: "${q}"`);
   } catch (e) {
     console.error('[search] Failed to trigger background ingestion:', e);
   }

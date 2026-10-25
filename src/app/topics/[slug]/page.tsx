@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { after } from 'next/server';
 import { Suspense } from 'react';
 import { GraduationCap, Video, Mic, Zap, Users, Hash } from 'lucide-react';
 import { keywordSearch } from '@/services/search/keyword';
@@ -12,7 +13,7 @@ import { VideoCard } from '@/components/cards/VideoCard';
 import { CourseCard } from '@/components/cards/CourseCard';
 import { CreatorCard } from '@/components/cards/CreatorCard';
 import { SectionErrorBoundary } from '@/components/ui/SectionErrorBoundary';
-import type { AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
+import type { AILearningPath, AITopicOverview, Video as VideoType, Playlist, Channel, SearchResultCategories } from '@/types';
 import { getTopicBySlug } from '@/config/topics';
 import { TopicUniverse } from '@/components/topics/TopicUniverse';
 import { Reveal } from '@/lib/motion';
@@ -119,42 +120,27 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
       topicSlug: seededTopic?.slug,
     });
   } catch (error) {
-    // Search failures are expected operational failures, not an RSC crash.
-    // The live path below still gives the visitor a chance to see content.
+    // Search failures are operational failures, not an RSC crash.
     console.error('[TopicPage] Seeded search failed:', { topic: topic.slug, error });
   }
   const { categoryOrder } = classifyIntent(topic.name);
-  const { courses, videos, podcasts, totalResults } = searchData;
+  const { totalResults } = searchData;
 
-  let isLiveResults = false;
-  let liveSearchData: TopicSearchData | null = null;
-
-  // Empty data is a cold start whether the topic is seeded or not. The live
-  // search uses the same multi-query, relevance-filtered pipeline as ingestion.
   if (totalResults === 0) {
-    try {
-      const { fastSearch } = await import('@/services/search/fast');
-      liveSearchData = await fastSearch({ q: topic.name, limit: 12 });
-      isLiveResults = liveSearchData.totalResults > 0;
-    } catch (e) {
-      console.error('[TopicPage] Live fallback failed:', { topic: topic.slug, error: e });
-    }
-
-    // Inngest enforces a per-topic concurrency and rate limit, preventing a
-    // burst of empty-page requests from starting duplicate ingestion work.
-    try {
-      const { inngest } = await import('@/jobs/ingestion');
-      await inngest.send({
-        name: 'app/topic.ingest',
-        data: { topic: topic.name, maxSearchCalls: 6, skipIfRecent: false },
-      });
-    } catch (error) {
-      console.error('[TopicPage] Could not queue background ingestion:', { topic: topic.slug, error });
-    }
+    after(async () => {
+      try {
+        const { inngest } = await import('@/jobs/client');
+        await inngest.send({
+          name: 'app/topic.ingest',
+          data: { topic: topic.name, maxSearchCalls: 6, skipIfRecent: false },
+        });
+      } catch (error) {
+        console.error('[TopicPage] Could not queue background ingestion:', { topic: topic.slug, error });
+      }
+    });
   }
 
-  // Use live data if available, otherwise DB data
-  const displayData = isLiveResults && liveSearchData ? liveSearchData : searchData;
+  const displayData = searchData;
   const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
   const displayTotalResults = displayData.totalResults;
 
@@ -176,11 +162,6 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
     })),
   ].slice(0, 15);
 
-  let aiOverview: AITopicOverview | null = null;
-  if (displayTotalResults > 0) {
-    aiOverview = await generateTopicOverview(topic.name, aiCatalog);
-  }
-
   const fallbackOverview: AITopicOverview = {
     what_is_it: seededTopic?.description ?? topic.description ?? `Learn the core skills of ${topic.name}.`,
     what_to_learn: [...(seededTopic?.learn ?? [])],
@@ -189,45 +170,44 @@ async function TopicPageContent({ topic }: { topic: { name: string; slug: string
     confidence_note: 'Curated from the Tubiq topic catalogue.',
   };
 
-  let aiLearningPath = null;
+  const allContent = [
+    ...displayCourses.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: null,
+      contentType: 'course',
+      durationSeconds: c.estimatedDurationSeconds,
+      difficulty: c.difficulty,
+    })),
+    ...displayVideos.map((v) => ({
+      id: v.id,
+      title: v.title,
+      description: v.description,
+      contentType: v.contentType,
+      durationSeconds: v.durationSeconds,
+      difficulty: v.difficulty,
+    })),
+    ...displayPodcasts.map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      contentType: p.contentType,
+      durationSeconds: p.durationSeconds,
+      difficulty: p.difficulty,
+    })),
+  ];
 
-  if (displayTotalResults > 0) {
-    const allContent = [
-      ...displayCourses.map((c) => ({
-        id: c.id,
-        title: c.title,
-        description: null,
-        contentType: 'course',
-        durationSeconds: c.estimatedDurationSeconds,
-        difficulty: c.difficulty,
-      })),
-      ...displayVideos.map((v) => ({
-        id: v.id,
-        title: v.title,
-        description: v.description,
-        contentType: v.contentType,
-        durationSeconds: v.durationSeconds,
-        difficulty: v.difficulty,
-      })),
-      ...displayPodcasts.map((p) => ({
-        id: p.id,
-        title: p.title,
-        description: p.description,
-        contentType: p.contentType,
-        durationSeconds: p.durationSeconds,
-        difficulty: p.difficulty,
-      })),
-    ];
-
-    if (allContent.length > 0) {
-      try {
-        const pathRes = await generateLearningPath(topic.name, allContent);
-        aiLearningPath = pathRes;
-      } catch (e) {
-        console.error('[TopicPage] AI generation error:', e);
-      }
-    }
-  }
+  const overviewPromise = displayTotalResults > 0
+    ? generateTopicOverview(topic.name, aiCatalog)
+    : Promise.resolve(null);
+  const learningPathPromise: Promise<AILearningPath | null> =
+    displayTotalResults > 0 && allContent.length > 0
+      ? generateLearningPath(topic.name, allContent)
+      : Promise.resolve(null);
+  const [aiOverview, aiLearningPath] = await Promise.all([
+    overviewPromise,
+    learningPathPromise,
+  ]);
 
   // Create fast lookup maps for learning path (only for DB results)
   const videosById: Record<string, VideoType> = {};

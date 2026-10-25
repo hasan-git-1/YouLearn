@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 interface ProgressContextType {
@@ -18,40 +18,25 @@ const ProgressContext = createContext<ProgressContextType | undefined>(undefined
 const LOCAL_COMPLETED_KEY = 'tubiq_completed_videos';
 const LOCAL_SAVED_KEY = 'tubiq_saved_items';
 
-export function ProgressProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [completedVideoIds, setCompletedVideoIds] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const local = localStorage.getItem(LOCAL_COMPLETED_KEY);
-        if (local) return new Set(JSON.parse(local));
-      } catch {}
-    }
+function readLocalIds(key: string): Set<string> {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) ?? '[]');
+    return Array.isArray(value) && value.every((id): id is string => typeof id === 'string')
+      ? new Set(value)
+      : new Set();
+  } catch {
     return new Set();
-  });
+  }
+}
 
-  const [savedItemIds, setSavedItemIds] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const local = localStorage.getItem(LOCAL_SAVED_KEY);
-        if (local) return new Set(JSON.parse(local));
-      } catch {}
-    }
-    return new Set();
-  });
+export function ProgressProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const previousUserId = useRef<string | null>(null);
+  const [completedVideoIds, setCompletedVideoIds] = useState<Set<string>>(() => new Set());
+  const [savedItemIds, setSavedItemIds] = useState<Set<string>>(() => new Set());
 
   const refreshProgress = useCallback(async () => {
-    if (!user) {
-      const emptyCompleted = new Set<string>();
-      const emptySaved = new Set<string>();
-      setCompletedVideoIds(emptyCompleted);
-      setSavedItemIds(emptySaved);
-      try {
-        localStorage.removeItem(LOCAL_COMPLETED_KEY);
-        localStorage.removeItem(LOCAL_SAVED_KEY);
-      } catch {}
-      return;
-    }
+    if (!user) return;
 
     try {
       const [progressRes, savedRes] = await Promise.all([
@@ -59,8 +44,11 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
         fetch('/api/user/saved'),
       ]);
 
-      const progressData = await progressRes.json().catch(() => ({}));
-      const savedData = await savedRes.json().catch(() => ({}));
+      if (!progressRes.ok || !savedRes.ok) {
+        throw new Error(`Progress sync failed (${progressRes.status}, ${savedRes.status})`);
+      }
+      const progressData = await progressRes.json();
+      const savedData = await savedRes.json();
 
       if (Array.isArray(progressData.completedIds)) {
         setCompletedVideoIds(new Set(progressData.completedIds));
@@ -81,8 +69,32 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    void refreshProgress();
-  }, [refreshProgress]);
+    if (isAuthLoading) return;
+    if (!user) {
+      const wasSignedIn = previousUserId.current !== null;
+      previousUserId.current = null;
+      if (wasSignedIn) {
+        try {
+          localStorage.removeItem(LOCAL_COMPLETED_KEY);
+          localStorage.removeItem(LOCAL_SAVED_KEY);
+        } catch {}
+      }
+      const timeoutId = window.setTimeout(() => {
+        if (wasSignedIn) {
+          setCompletedVideoIds(new Set());
+          setSavedItemIds(new Set());
+        } else {
+          setCompletedVideoIds(readLocalIds(LOCAL_COMPLETED_KEY));
+          setSavedItemIds(readLocalIds(LOCAL_SAVED_KEY));
+        }
+      }, 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    previousUserId.current = user.id;
+    const timeoutId = window.setTimeout(() => void refreshProgress(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [isAuthLoading, user, refreshProgress]);
 
   const isCompleted = useCallback(
     (videoId: string) => completedVideoIds.has(videoId),
@@ -111,11 +123,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
 
       if (user) {
         try {
-          await fetch('/api/user/progress', {
+          const response = await fetch('/api/user/progress', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ videoId }),
           });
+          if (!response.ok) throw new Error(`Progress update failed (${response.status})`);
           await refreshProgress();
         } catch (e) {
           console.error('[ProgressContext] Failed to sync progress:', e);
@@ -142,11 +155,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
 
       if (user) {
         try {
-          await fetch('/api/user/saved', {
+          const response = await fetch('/api/user/saved', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contentId, contentType }),
           });
+          if (!response.ok) throw new Error(`Bookmark update failed (${response.status})`);
           await refreshProgress();
         } catch (e) {
           console.error('[ProgressContext] Failed to sync bookmark:', e);

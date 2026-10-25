@@ -8,11 +8,11 @@
  * Search pipeline:
  *   1. Resolve seeded topic (instant, no DB/API)
  *   2. Keyword search against Postgres
- *   3. If 0 results → live fallback via fastSearch (direct YouTube API)
- *   4. If 0 results from both → cold-start state + background ingestion
+ *   3. If 0 results → cold-start state + background ingestion
  */
 
 import type React from 'react';
+import { after } from 'next/server';
 import { GraduationCap, Video, Mic, Zap, Users, Clock3 } from 'lucide-react';
 import { CategorySection } from '@/components/ui/CategorySection';
 import { AIOverviewCard } from '@/components/ui/AIOverviewCard';
@@ -31,7 +31,7 @@ import { Reveal } from '@/lib/motion';
 // Fire-and-forget ingestion trigger for cold-start — server-side
 async function triggerIngestion(query: string) {
   try {
-    const { inngest } = await import('@/jobs/ingestion');
+    const { inngest } = await import('@/jobs/client');
     await inngest.send({
       name: 'app/topic.ingest',
       data: { topic: query, maxSearchCalls: 5, skipIfRecent: false },
@@ -84,7 +84,6 @@ interface SearchResultsProps {
 }
 
 export async function SearchResults({ query }: SearchResultsProps) {
-  const totalStart = performance.now();
   // This is intentionally the first operation: unsupported requests must not
   // reach Postgres, YouTube, Gemini, or the background-ingestion queue.
   const topicMatch = matchTopic(query);
@@ -92,21 +91,14 @@ export async function SearchResults({ query }: SearchResultsProps) {
   const seededTopic = topicMatch.topic;
   const databaseQuery = seededTopic.name;
 
-  if (seededTopic) {
-    console.log(`[SearchResults] Resolved seeded topic: "${query}" → "${seededTopic.slug}" (${seededTopic.name})`);
-  }
-
   // ── Step 1: Try keyword search against DB ──────────────────────────────
   let searchData;
-  let dbReachable = true;
-  const dbStart = performance.now();
   try {
     searchData = await keywordSearch({
       q: databaseQuery,
       pool: 30,
       topicSlug: seededTopic?.slug,
     });
-    console.log(`[SearchResults] DB search took ${Math.round(performance.now() - dbStart)}ms — ${searchData.totalResults} results for "${query}"`);
   } catch (error) {
     console.error('[SearchResults] DB error:', error);
 
@@ -115,7 +107,6 @@ export async function SearchResults({ query }: SearchResultsProps) {
       await checkDbConnection();
     } catch (connError) {
       if (connError instanceof DatabaseConnectionError) {
-        dbReachable = false;
         return <DBUnreachableState />;
       }
     }
@@ -124,42 +115,20 @@ export async function SearchResults({ query }: SearchResultsProps) {
     return <DBQueryErrorState />;
   }
 
-  const { courses, videos, podcasts, shorts, creators, totalResults } = searchData;
-
-  // ── Step 2: Live fallback if no DB results ─────────────────────────────
-  let isLiveResults = false;
-  let displayData = searchData;
-
+  const { totalResults } = searchData;
   if (totalResults === 0) {
-    console.log(`[SearchResults] No DB results for "${query}" — trying live fallback`);
-    const liveStart = performance.now();
-
-    try {
-      const { fastSearch } = await import('@/services/search/fast');
-      const liveSearchData = await fastSearch({ q: seededTopic?.name ?? query });
-
-      if (liveSearchData.totalResults > 0) {
-        displayData = liveSearchData;
-        isLiveResults = true;
-        console.log(`[SearchResults] Live fallback returned ${liveSearchData.totalResults} results in ${Math.round(performance.now() - liveStart)}ms`);
-      } else {
-        console.log(`[SearchResults] Live fallback also returned 0 results in ${Math.round(performance.now() - liveStart)}ms`);
-      }
-    } catch (e) {
-      console.error('[SearchResults] Live fallback failed:', e);
-    }
-
-    // Trigger background ingestion regardless (non-blocking)
-    void triggerIngestion(query);
-
-    // If still no results after live fallback, show cold start
-    if (!isLiveResults) {
-      return <ColdStartState query={query} />;
-    }
+    after(() => triggerIngestion(seededTopic.name));
+    return <ColdStartState query={query} />;
   }
 
-  const { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators } = displayData;
-  const displayTotalResults = displayData.totalResults;
+  const {
+    courses: displayCourses,
+    videos: displayVideos,
+    podcasts: displayPodcasts,
+    shorts: displayShorts,
+    creators: displayCreators,
+  } = searchData;
+  const displayTotalResults = searchData.totalResults;
 
   // Classify intent to determine section order
   const { categoryOrder } = classifyIntent(query);
@@ -200,8 +169,6 @@ export async function SearchResults({ query }: SearchResultsProps) {
     confidence_note: 'Curated from the Tubiq topic catalogue.',
   };
 
-  console.log(`[SearchResults] Total render pipeline for "${query}": ${Math.round(performance.now() - totalStart)}ms (live=${isLiveResults})`);
-
   return (
     <div>
       {/* Results header */}
@@ -214,12 +181,6 @@ export async function SearchResults({ query }: SearchResultsProps) {
           <span className="gradient-text">&ldquo;{query}&rdquo;</span>
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {isLiveResults && (
-            <span className="inline-flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full text-xs"
-              style={{ background: 'rgba(var(--brand-rgb), 0.1)', color: 'var(--brand-primary)' }}>
-              ⚡ Live results
-            </span>
-          )}
           {`${displayTotalResults} items across ${categoryOrder.filter((cat) => {
             const map = { courses: displayCourses, videos: displayVideos, podcasts: displayPodcasts, shorts: displayShorts, creators: displayCreators };
             return (map[cat]?.length ?? 0) > 0;

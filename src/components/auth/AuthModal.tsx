@@ -11,11 +11,13 @@ export function AuthModal() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setSuccessMsg(null);
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !password) {
@@ -43,6 +45,9 @@ export function AuthModal() {
         const res = await signUpWithPassword(cleanEmail, password);
         if (res.error) {
           setErrorMsg(res.error);
+        } else if (res.message && res.message !== 'Welcome to Tubiq!') {
+          setPassword('');
+          setSuccessMsg(res.message);
         } else {
           setEmail('');
           setPassword('');
@@ -124,7 +129,7 @@ export function AuthModal() {
         <p className="text-xs text-gray-400 mb-6">
           {tab === 'signin'
             ? 'Sign in to access your saved courses, bookmarks, and learning progress.'
-            : 'Get instant access with your email and password — zero waiting or confirmation required.'}
+            : 'Create an account to sync your saved courses, bookmarks, and learning progress.'}
         </p>
 
         {/* Tabs */}
@@ -137,6 +142,7 @@ export function AuthModal() {
             onClick={() => {
               setTab('signin');
               setErrorMsg(null);
+              setSuccessMsg(null);
             }}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               tab === 'signin'
@@ -151,6 +157,7 @@ export function AuthModal() {
             onClick={() => {
               setTab('signup');
               setErrorMsg(null);
+              setSuccessMsg(null);
             }}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               tab === 'signup'
@@ -167,6 +174,11 @@ export function AuthModal() {
           <div className="flex items-start gap-2 p-3 mb-4 rounded-xl text-xs bg-red-500/10 border border-red-500/20 text-red-300">
             <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-400" />
             <span>{errorMsg}</span>
+          </div>
+        )}
+        {successMsg && (
+          <div className="mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-200" role="status">
+            {successMsg}
           </div>
         )}
 

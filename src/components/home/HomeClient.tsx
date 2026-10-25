@@ -2,8 +2,8 @@
 
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { KnowledgeUniverseCanvas } from './KnowledgeUniverseCanvas';
-import { KnowledgeCore3D } from './KnowledgeCore3D';
 import { HeroHeadline } from './HeroHeadline';
 import { CommandSearch } from './CommandSearch';
 import { FloatingTopicSignals } from './FloatingTopicSignals';
@@ -14,9 +14,13 @@ import { KnowledgeArchitecture } from './KnowledgeArchitecture';
 import { UniverseCTA } from './UniverseCTA';
 import { CursorSpotlight, Reveal, useReducedMotionPreference } from '@/lib/motion';
 
-interface HomeClientProps {
-  allTopics: { id: string; name: string; slug: string }[];
-}
+const KnowledgeCore3D = dynamic(
+  () => import('./KnowledgeCore3D').then((module) => module.KnowledgeCore3D),
+  {
+    ssr: false,
+    loading: () => <div className="min-h-[420px] w-full" aria-hidden="true" />,
+  }
+);
 
 const starPositions = [
   { left: '8%', top: '16%', size: 2.2, opacity: 0.72, delay: 0 },
@@ -54,7 +58,7 @@ const starTrails = [
   { left: '17%', top: '69%', length: 88, angle: -36, duration: 14, delay: 4 },
 ];
 
-export function HomeClient({ allTopics }: HomeClientProps) {
+export function HomeClient() {
   const reduceMotion = useReducedMotionPreference();
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
@@ -141,7 +145,7 @@ export function HomeClient({ allTopics }: HomeClientProps) {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(ellipse_at_top,rgba(62,74,180,0.10),transparent_68%)]" />
         <Reveal><ExploreUniverseSection /></Reveal>
         <Reveal><InteractiveProductSimulation /></Reveal>
-        <Reveal><DiscoveryBento topicsList={allTopics} /></Reveal>
+        <Reveal><DiscoveryBento /></Reveal>
         <Reveal><KnowledgeArchitecture /></Reveal>
         <Reveal className="pb-16"><UniverseCTA /></Reveal>
       </div>

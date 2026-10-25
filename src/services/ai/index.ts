@@ -30,6 +30,28 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
+const INTERACTIVE_AI_TIMEOUT_MS = 5_000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`[AI] ${operation} timed out after ${timeoutMs}ms`)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 export interface RelevanceCandidate {
   id: string;
@@ -142,10 +164,6 @@ export async function filterTopicallyRelevant(
       ).join('\n\n---\n\n');
 
       try {
-        const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error(`[AI] filterTopicallyRelevant timed out after ${timeoutMs}ms`)), timeoutMs)
-        );
-
         const apiPromise = ai.models.generateContent({
           model: DEFAULT_MODEL,
           contents: `You are filtering search results for topical relevance only.
@@ -166,7 +184,7 @@ Return one JSON object for every provided ID.\n\n${candidateText}`,
           },
         });
 
-        const response = await Promise.race([apiPromise, timeoutPromise]);
+        const response = await withTimeout(apiPromise, timeoutMs, 'filterTopicallyRelevant');
         if (!response || !response.text) return;
 
         const parsed = JSON.parse(response.text) as Array<{
@@ -258,15 +276,19 @@ Return only valid JSON matching the schema.`;
       required: ['what_is_it', 'what_to_learn', 'recommended_starting_point', 'confidence_note'],
     };
 
-    const response = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-        temperature: 0.2,
-      },
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: DEFAULT_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.2,
+        },
+      }),
+      INTERACTIVE_AI_TIMEOUT_MS,
+      'generateTopicOverview'
+    );
 
     if (!response.text) return null;
     return JSON.parse(response.text) as AITopicOverview;
@@ -395,15 +417,19 @@ Rules:
       required: ['levels'],
     };
 
-    const response = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-        temperature: 0.1,
-      },
-    });
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: DEFAULT_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.1,
+        },
+      }),
+      INTERACTIVE_AI_TIMEOUT_MS,
+      'generateLearningPath'
+    );
 
     if (!response.text) return null;
     return JSON.parse(response.text) as AILearningPath;
